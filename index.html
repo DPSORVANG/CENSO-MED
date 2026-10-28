@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ResiMed MI" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <title>ResiMed MI - Censo Clínico, Notas de Evolución & Respaldo Médico</title>
+    <meta name="description" content="Sistema clínico integral para residentes de Medicina Interna: censo imprimible en hoja carta horizontal, generador ágil de notas de evolución, seguimiento de antibióticos por día, tendencias de laboratorio y respaldo inmutable." />
+    <meta property="og:title" content="ResiMed MI - Censo Clínico, Notas de Evolución & Respaldo Médico" />
+    <meta property="og:description" content="Sistema clínico integral para residentes de Medicina Interna: censo imprimible en hoja carta horizontal, generador ágil de notas de evolución, seguimiento de antibióticos por día, tendencias de laboratorio y respaldo inmutable." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      (function () {
+        // Intercept Vite HMR WebSocket when HMR is disabled in Cloud Run / AI Studio preview
+        var NativeWebSocket = window.WebSocket;
+        if (NativeWebSocket) {
+          var WrappedWebSocket = function (url, protocols) {
+            var isViteHmr =
+              protocols === 'vite-hmr' ||
+              protocols === 'vite-ping' ||
+              (Array.isArray(protocols) &&
+                (protocols.indexOf('vite-hmr') !== -1 || protocols.indexOf('vite-ping') !== -1)) ||
+              (typeof url === 'string' && url.indexOf(':24678') !== -1);
+
+            if (isViteHmr) {
+              return {
+                url: typeof url === 'string' ? url : '',
+                readyState: 1,
+                OPEN: 1,
+                CONNECTING: 0,
+                CLOSING: 2,
+                CLOSED: 3,
+                protocol: 'vite-hmr',
+                extensions: '',
+                bufferedAmount: 0,
+                binaryType: 'blob',
+                onopen: null,
+                onerror: null,
+                onclose: null,
+                onmessage: null,
+                addEventListener: function () {},
+                removeEventListener: function () {},
+                dispatchEvent: function () {
+                  return true;
+                },
+                send: function () {},
+                close: function () {},
+              };
+            }
+            return protocols !== undefined
+              ? new NativeWebSocket(url, protocols)
+              : new NativeWebSocket(url);
+          };
+          WrappedWebSocket.prototype = NativeWebSocket.prototype;
+          WrappedWebSocket.CONNECTING = NativeWebSocket.CONNECTING;
+          WrappedWebSocket.OPEN = NativeWebSocket.OPEN;
+          WrappedWebSocket.CLOSING = NativeWebSocket.CLOSING;
+          WrappedWebSocket.CLOSED = NativeWebSocket.CLOSED;
+          window.WebSocket = WrappedWebSocket;
+        }
+
+        // Also guard against any unhandledrejection or error from @vite/client
+        window.addEventListener(
+          'unhandledrejection',
+          function (event) {
+            var msg = event && event.reason && (event.reason.message || String(event.reason));
+            if (msg && msg.indexOf('WebSocket closed without opened') !== -1) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          },
+          true
+        );
+        window.addEventListener(
+          'error',
+          function (event) {
+            var msg = event && (event.message || (event.error && event.error.message));
+            if (msg && msg.indexOf('WebSocket closed without opened') !== -1) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          },
+          true
+        );
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

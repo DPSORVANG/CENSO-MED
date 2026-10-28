@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Política de Privacidad — ResiMed MI (Censo Clínico y Notas de Evolución)</title>
+    <meta
+      name="description"
+      content="Política de Privacidad oficial de ResiMed MI conforme a los requisitos de Google API Services User Data Policy (Limited Use) y la normativa de confidencialidad clínica."
+    />
+    <style>
+      :root {
+        color-scheme: dark light;
+      }
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #020617;
+        color: #e2e8f0;
+        margin: 0;
+        padding: 32px 16px;
+        line-height: 1.65;
+      }
+      .container {
+        max-width: 860px;
+        margin: 0 auto;
+        background-color: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 20px;
+        padding: 32px 36px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(20, 184, 166, 0.15);
+        color: #5eead4;
+        border: 1px solid rgba(20, 184, 166, 0.35);
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      h1 {
+        color: #ffffff;
+        font-size: 26px;
+        margin: 12px 0 6px;
+      }
+      .subtitle {
+        color: #94a3b8;
+        font-size: 13px;
+        margin-bottom: 24px;
+        border-bottom: 1px solid #1e293b;
+        padding-bottom: 16px;
+      }
+      h2 {
+        color: #2dd4bf;
+        font-size: 17px;
+        margin-top: 28px;
+        margin-bottom: 8px;
+      }
+      p, li {
+        color: #cbd5e1;
+        font-size: 14px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin-bottom: 6px;
+      }
+      code {
+        background: #1e293b;
+        color: #5eead4;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12.5px;
+      }
+      .highlight-box {
+        background: rgba(15, 118, 110, 0.14);
+        border: 1px solid rgba(20, 184, 166, 0.35);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin: 20px 0;
+      }
+      .footer {
+        margin-top: 32px;
+        padding-top: 20px;
+        border-top: 1px solid #1e293b;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        font-size: 13px;
+      }
+      a {
+        color: #2dd4bf;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      .btn-back {
+        display: inline-block;
+        background: #0d9488;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .btn-back:hover {
+        background: #14b8a6;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <span class="badge">Documento Legal y de Seguridad Clínica</span>
+      <h1>Política de Privacidad — ResiMed MI</h1>
+      <div class="subtitle">
+        Última actualización: 28 de octubre de 2026 • Cumplimiento con Google API Services User Data Policy (Limited Use) y Normativa de Expediente Clínico (NOM-004-SSA3-2012)
+      </div>
+
+      <p>
+        <strong>ResiMed MI</strong> (&ldquo;la Aplicación&rdquo;) es un sistema informático de apoyo clínico diseñado para médicos residentes, adscritos y servicios hospitalarios de Medicina Interna, enfocado en la gestión del censo hospitalario diario, seguimiento de laboratorios multipanel, control de esquemas antibióticos, elaboración estructurada de notas de evolución y generación de formatos imprimibles de pase de visita.
+      </p>
+
+      <h2>1. Arquitectura de Privacidad (&ldquo;Cero Servidores de Terceros&rdquo;)</h2>
+      <p>
+        ResiMed MI opera bajo un modelo estricto de <strong>propiedad exclusiva de datos por parte del usuario o institución médica</strong>:
+      </p>
+      <ul>
+        <li>La Aplicación <strong>no posee ni utiliza bases de datos externas centralizadas</strong> para almacenar, comercializar ni perfilar información de pacientes.</li>
+        <li>Toda la información capturada se almacena únicamente en dos ubicaciones controladas por el propio médico o servicio hospitalario:
+          <ol>
+            <li>El almacenamiento local del navegador del dispositivo autorizado (<code>localStorage</code>) para permitir el funcionamiento sin conexión a internet (Offline PWA).</li>
+            <li>La cuenta personal o institucional de <strong>Google Drive</strong> con la que el usuario decide autenticarse voluntariamente, dentro de un archivo JSON privado llamado <code>ResiMed-Censo-MI.json</code>.</li>
+          </ol>
+        </li>
+      </ul>
+
+      <h2>2. Información que Recopilamos a través de Google OAuth 2.0</h2>
+      <p>
+        Cuando el usuario elige iniciar sesión mediante el botón <strong>&ldquo;Iniciar Sesión con Google Drive&rdquo;</strong>, la Aplicación solicita autorización únicamente para los siguientes alcances (<em>OAuth Scopes</em>):
+      </p>
+      <ul>
+        <li><strong>Identificación básica de sesión (<code>email</code>, <code>profile</code>, <code>openid</code>):</strong> Se utiliza exclusivamente para mostrar en pantalla qué cuenta institucional de Google Drive se encuentra activa y separar el espacio de trabajo local por cuenta.</li>
+        <li><strong>Acceso de alcance restringido a Google Drive (<code>https://www.googleapis.com/auth/drive.file</code> o acceso al archivo de censo):</strong> Se utiliza única y exclusivamente para crear, leer y actualizar el archivo de respaldo clínico <code>ResiMed-Censo-MI.json</code> generado por la propia Aplicación. ResiMed MI no inspecciona, descarga, modifica ni elimina ningún otro archivo, fotografía, documento o carpeta ajena en el Google Drive del usuario.</li>
+      </ul>
+
+      <div class="highlight-box">
+        <strong>Declaración de Uso Limitado (Google API Services User Data Policy — Limited Use):</strong>
+        <p style="margin: 8px 0 0;">
+          El uso y la transferencia que hace <strong>ResiMed MI</strong> de la información recibida de las APIs de Google se adhieren estrictamente a la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Política de Datos de Usuario de los Servicios API de Google (Google API Services User Data Policy)</a>, incluidos los requisitos de <strong>Uso Limitado (Limited Use)</strong>. Los datos obtenidos de Google Drive nunca se transfieren a terceros, nunca se utilizan con fines publicitarios y nunca se emplean para entrenar modelos de inteligencia artificial externos.
+        </p>
+      </div>
+
+      <h2>3. Protección contra Abuso Automatizado (Google reCAPTCHA Enterprise)</h2>
+      <p>
+        Para proteger el flujo de autenticación contra accesos automatizados no autorizados, la Aplicación integra <strong>Google reCAPTCHA Enterprise</strong>, el cual evalúa señales técnicas de seguridad durante el inicio de sesión conforme a la Política de Privacidad y Condiciones de Servicio de Google.
+      </p>
+
+      <h2>4. Confidencialidad Médica y Responsabilidad del Profesional de la Salud</h2>
+      <ul>
+        <li>El personal médico u hospitalario usuario es el único titular y responsable del contenido clínico registrado en su censo y en su unidad de Google Drive, debiendo observar los lineamientos de secreto profesional, la <strong>NOM-004-SSA3-2012 (Del expediente clínico)</strong> y la legislación aplicable en materia de protección de datos personales.</li>
+        <li>La Aplicación incluye herramientas locales de protección en estaciones compartidas, tales como bloqueo de pantalla por PIN y autorización por PIN de Administrador para bajas o egresos hospitalarios.</li>
+      </ul>
+
+      <h2>5. Conservación, Exportación y Eliminación de Datos</h2>
+      <ul>
+        <li><strong>Control total por el usuario:</strong> El usuario puede descargar en cualquier momento su archivo completo en formato estándar <code>.JSON</code>, vaciar su censo local o eliminar directamente el archivo <code>ResiMed-Censo-MI.json</code> desde su cuenta de Google Drive.</li>
+        <li><strong>Depuración automática de egresos:</strong> Con el propósito de minimizar la retención innecesaria de datos en el censo activo, los registros marcados como &ldquo;Egreso Hospitalario&rdquo; se depuran automáticamente del censo activo transcurridos 5 días desde la fecha de alta.</li>
+        <li><strong>Revocación de permisos de Google:</strong> El usuario puede cerrar sesión en cualquier momento desde el panel de sincronización de la Aplicación o revocar el acceso de <strong>ResiMed MI</strong> directamente desde la página de seguridad de su cuenta de Google (<a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>).</li>
+      </ul>
+
+      <h2>6. Cambios a esta Política de Privacidad</h2>
+      <p>
+        Cualquier actualización a la presente Política de Privacidad será publicada directamente en esta dirección URL (<code>/privacidad.html</code>) y dentro del visor legal en la página principal de la Aplicación.
+      </p>
+
+      <div class="footer">
+        <a href="/" class="btn-back">← Volver a ResiMed MI</a>
+        <div>
+          <a href="/terminos.html">Ver Condiciones del Servicio</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
