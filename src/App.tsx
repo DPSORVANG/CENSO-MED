@@ -1037,17 +1037,6 @@ export default function App() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <a
-            href="/privacidad.html"
-            onClick={(e) => {
-              e.preventDefault();
-              setLegalModalState({ isOpen: true, tab: 'privacy' });
-            }}
-            className="text-slate-400 hover:text-teal-300 underline underline-offset-2 cursor-pointer"
-          >
-            Política de Privacidad
-          </a>
-          <span className="text-slate-600">|</span>
           <button
             onClick={() => setIsDriveSyncOpen(true)}
             className="text-teal-300 hover:text-teal-200 font-bold underline cursor-pointer"

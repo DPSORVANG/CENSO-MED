@@ -88,7 +88,8 @@ export default defineConfig(() => {
       },
     },
     server: {
-      hmr: false,
+      hmr: false as const,
+      ws: false as const,
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };
