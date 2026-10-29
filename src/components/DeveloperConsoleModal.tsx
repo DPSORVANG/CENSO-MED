@@ -233,24 +233,29 @@ export const DeveloperConsoleModal: React.FC<DeveloperConsoleModalProps> = ({
 
   // Unlocked Developer Console View
   return (
-    <div className="fixed inset-0 z-[80] bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-8 text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-[80] bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-hidden overscroll-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl sm:rounded-3xl w-full max-w-2xl max-h-[92dvh] flex flex-col shadow-2xl overflow-hidden text-slate-100 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-purple-950/60 to-slate-900 p-5 sm:p-6 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-2xl">
+        <div className="bg-gradient-to-r from-slate-900 via-purple-950/60 to-slate-900 p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2.5 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-2xl shrink-0">
               <Terminal className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm sm:text-base font-bold text-white">
                   Consola Oculta de Desarrollador y Pruebas (QA)
                 </h2>
                 <span className="bg-purple-950 text-purple-300 border border-purple-700 text-[10px] px-2 py-0.5 rounded-full font-mono">
                   PIN Verificado
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
                 Panel privado para simulación de pacientes, limpieza de base de datos y configuración de Google Cloud OAuth / reCAPTCHA.
               </p>
             </div>
@@ -258,13 +263,14 @@ export const DeveloperConsoleModal: React.FC<DeveloperConsoleModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 text-rose-400" />
+            <span>Cerrar</span>
           </button>
         </div>
 
-        <div className="p-5 sm:p-6 space-y-5 max-h-[78vh] overflow-y-auto text-xs">
+        <div className="flex-1 min-h-0 p-4 sm:p-6 space-y-5 overflow-y-auto overscroll-contain touch-pan-y text-xs">
           {/* Section 1: Stress Test & Database Simulation */}
           <div className="p-4 rounded-2xl bg-slate-950/90 border border-purple-500/30 space-y-3">
             <div className="flex items-center justify-between gap-2">

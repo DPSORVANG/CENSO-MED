@@ -704,10 +704,10 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-[92vh] overflow-hidden">
+    <div className="fixed inset-0 z-[70] bg-slate-900/85 backdrop-blur-xs flex items-center justify-center p-1.5 sm:p-4 overflow-hidden overscroll-none">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-[95dvh] sm:h-[92dvh] overflow-hidden">
         {/* Modal Top Header with Mode Switcher */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between border-b border-slate-800 gap-4 shrink-0">
+        <div className="px-3.5 sm:px-6 py-2.5 sm:py-4 bg-slate-900 text-white flex flex-wrap items-center justify-between border-b border-slate-800 gap-2 sm:gap-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-teal-500/20 text-teal-400 border border-teal-500/30 flex items-center justify-center">
               <UserPlus className="w-6 h-6" />
@@ -794,7 +794,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
 
         {/* MODE 1: INGRESO RÁPIDO / EXPRESS */}
         {mode === 'express' ? (
-          <form onSubmit={handleFinalSubmit} noValidate className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5 text-xs">
+          <form onSubmit={handleFinalSubmit} noValidate className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y p-3.5 sm:p-6 space-y-5 text-xs">
 
             {/* Basic Info */}
             <div className="bg-slate-50 dark:bg-slate-850 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
@@ -1565,7 +1565,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             </div>
 
             {/* Sub-tab Body */}
-            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 text-xs">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y p-3.5 sm:p-6 space-y-4 text-xs">
               {/* TAB 1: FICHA & ANTECEDENTES */}
               {historyTab === 'ficha-ahf' && (
                 <div className="space-y-4">
@@ -2218,7 +2218,7 @@ export const PatientFormModal: React.FC<PatientFormModalProps> = ({
             </div>
 
             {/* Bottom Form Actions */}
-            <div className="px-6 py-3.5 bg-slate-100 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <div className="px-3.5 sm:px-6 py-3 bg-slate-100 dark:bg-slate-950/60 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
               <div className="flex items-center gap-2">
                 {initialPatient && onBackToExpediente && (
                   <button

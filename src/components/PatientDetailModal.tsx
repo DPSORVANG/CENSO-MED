@@ -517,77 +517,47 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/85 flex items-center justify-center pt-12 px-2 pb-2 sm:px-5 sm:pb-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-6xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="px-3.5 sm:px-6 py-3 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-800 shrink-0">
-          <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1">
-            <span className="px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 rounded-xl font-mono font-bold text-xs sm:text-sm shrink-0">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 md:p-4 overflow-hidden overscroll-none"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 w-full max-w-6xl rounded-t-2xl sm:rounded-2xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 flex flex-col h-[94dvh] sm:h-auto sm:max-h-[92dvh] overflow-hidden"
+      >
+        {/* Pinned Compact Header */}
+        <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-slate-900 text-white flex items-center justify-between gap-2 border-b border-slate-800 shrink-0">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="px-2 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/40 rounded-lg font-mono font-bold text-xs shrink-0">
               {patient.bed}
             </span>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <h2 className="text-sm sm:text-base font-bold text-white leading-tight break-words">
+              <div className="flex items-baseline gap-1.5 truncate">
+                <h2 className="text-xs sm:text-base font-bold text-white leading-tight truncate">
                   {patient.name}
                 </h2>
-                <span className="text-[11px] sm:text-xs text-slate-400">
+                <span className="hidden md:inline text-xs text-slate-400 shrink-0">
                   ({patient.age}a • {patient.gender} • Exp: {patient.recordNumber})
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] sm:text-xs text-slate-400">
-                <span>{patient.service}</span>
+              <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-400 truncate">
+                <span className="md:hidden">{patient.age}a •</span>
+                <span className="truncate">{patient.service}</span>
                 <span>•</span>
-                <strong className="text-teal-400">Día {stayDays} de estancia</strong>
-                <span>•</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] ${getCodeStatusInfo(patient.codeStatus).badgeClass}`}>
-                  {getCodeStatusInfo(patient.codeStatus).codeLabel}
-                </span>
-                {getRespiratorySupportFlags(patient).isIntubated && (
-                  <span className="px-2 py-0.5 rounded bg-rose-700 text-white border border-rose-800 text-[10px] font-extrabold uppercase">
-                    INTUBADO
-                  </span>
-                )}
-                {getRespiratorySupportFlags(patient).isCpap && (
-                  <span className="px-2 py-0.5 rounded bg-sky-600 text-white border border-sky-700 text-[10px] font-extrabold uppercase">
-                    CPAP
-                  </span>
-                )}
-                <div className="flex flex-wrap items-center gap-1">
-                  {getNonRedundantClinicalTags(patient.clinicalTags).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => onOpenTagSelector && onOpenTagSelector(patient)}
-                      className="bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded font-semibold cursor-pointer transition-colors"
-                      title="Clic para gestionar etiquetas del paciente"
-                    >
-                      {t}
-                    </button>
-                  ))}
-                  {onOpenTagSelector && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenTagSelector(patient)}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-600/20 hover:bg-teal-600/40 text-teal-300 border border-teal-500/40 text-[10px] font-bold cursor-pointer transition-colors"
-                      title="Agregar o quitar etiquetas clínicas sincronizadas"
-                    >
-                      <Tag className="w-3 h-3" />
-                      <span>+ Etiquetas</span>
-                    </button>
-                  )}
-                </div>
+                <strong className="text-teal-400 shrink-0">Día {stayDays}</strong>
               </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             {onEditPatient && (
               <button
+                type="button"
                 onClick={() => {
                   onClose();
                   onEditPatient(patient);
                 }}
-                className="bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                className="bg-slate-800 hover:bg-slate-700 text-teal-300 border border-slate-700 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all shadow-xs cursor-pointer"
                 title="Editar datos o registrar Historia Clínica Completa NOM-004"
               >
                 <BookOpen className="w-3.5 h-3.5 text-teal-400 shrink-0" />
@@ -596,175 +566,30 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
               </button>
             )}
             <button
+              type="button"
               onClick={onOpenNoteGenerator}
-              className="bg-teal-600 hover:bg-teal-700 text-white px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer"
+              className="bg-teal-600 hover:bg-teal-700 text-white px-2.5 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 transition-all cursor-pointer"
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />
-              <span>Nota de Evolución</span>
+              <span className="hidden sm:inline">Nota de Evolución</span>
+              <span className="sm:hidden">Nota</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-200 hover:text-white rounded-xl text-xs font-bold border border-rose-500/40 transition-colors cursor-pointer"
               title="Cerrar expediente (Esc)"
             >
-              <X className="w-4 h-4" />
-              <span className="hidden sm:inline">Cerrar</span>
+              <X className="w-4 h-4 shrink-0" />
+              <span>Cerrar</span>
             </button>
           </div>
         </div>
 
-        {/* Barra de Signos Vitales Actuales (Con Captura Pre-Nota para el Pase de Visita) */}
-        <div className="px-3.5 sm:px-6 py-2 bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          {isEditingVitals ? (
-            <form onSubmit={handleSavePreNoteVitals} className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300">
-                  <Activity className="w-3.5 h-3.5" />
-                  <span>Capturar Signos Vitales (Pre-Nota / Pase de Visita)</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingVitals(false)}
-                    className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-3 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Guardar SV para la Nota</span>
-                  </button>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 text-xs">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block">TA (mmHg)</span>
-                  <input
-                    type="text"
-                    value={vitalsDraft.bp}
-                    onChange={(e) => setVitalsDraft((p) => ({ ...p, bp: e.target.value }))}
-                    autoFocus
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block">FC (lpm)</span>
-                  <input
-                    type="text"
-                    value={vitalsDraft.hr}
-                    onChange={(e) => setVitalsDraft((p) => ({ ...p, hr: e.target.value }))}
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block">FR (rpm)</span>
-                  <input
-                    type="text"
-                    value={vitalsDraft.rr}
-                    onChange={(e) => setVitalsDraft((p) => ({ ...p, rr: e.target.value }))}
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block">Temp (°C)</span>
-                  <input
-                    type="text"
-                    value={vitalsDraft.temp}
-                    onChange={(e) => setVitalsDraft((p) => ({ ...p, temp: e.target.value }))}
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block">SpO2 (%)</span>
-                  <input
-                    type="text"
-                    value={vitalsDraft.spo2}
-                    onChange={(e) => setVitalsDraft((p) => ({ ...p, spo2: e.target.value }))}
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block">Glucemia</span>
-                  <input
-                    type="text"
-                    value={vitalsDraft.glucose}
-                    onChange={(e) => setVitalsDraft((p) => ({ ...p, glucose: e.target.value }))}
-                    placeholder="mg/dL"
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 block">Peso (kg)</span>
-                  <input
-                    type="text"
-                    value={vitalsDraft.weightKg}
-                    onChange={(e) => setVitalsDraft((p) => ({ ...p, weightKg: e.target.value }))}
-                    placeholder="kg"
-                    className="w-full px-2 py-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
-            </form>
-          ) : (
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-              <div
-                onClick={() => setIsEditingVitals(true)}
-                title="Clic para ingresar o actualizar Signos Vitales antes de la Nota de Evolución"
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-700 dark:text-slate-300 cursor-pointer hover:text-teal-600 dark:hover:text-teal-400"
-              >
-                <span className="font-sans font-extrabold text-teal-700 dark:text-teal-400 uppercase flex items-center gap-1">
-                  <Activity className="w-3.5 h-3.5" />
-                  <span>SV:</span>
-                </span>
-                {patient.vitals?.isNew && (
-                  <span className="px-1.5 py-0.5 rounded bg-teal-600 text-white font-sans font-extrabold text-[10px] uppercase">
-                    Pre-Nota {patient.vitals.updatedAt || ''}
-                  </span>
-                )}
-                <span>
-                  TA <strong>{patient.vitals?.bp || '-'}</strong>
-                </span>
-                <span>
-                  FC <strong>{patient.vitals?.hr || '-'} lpm</strong>
-                </span>
-                <span>
-                  FR <strong>{patient.vitals?.rr || '-'} rpm</strong>
-                </span>
-                <span>
-                  Temp <strong>{patient.vitals?.temp || '-'}°C</strong>
-                </span>
-                <span>
-                  SpO2 <strong>{patient.vitals?.spo2 || '-'}%</strong>
-                </span>
-                {patient.vitals?.glucose && (
-                  <span>
-                    Gluc <strong>{patient.vitals.glucose} mg/dL</strong>
-                  </span>
-                )}
-                {patient.vitals?.weightKg && (
-                  <span>
-                    Peso <strong>{patient.vitals.weightKg} kg</strong>
-                  </span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsEditingVitals(true)}
-                className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-sans font-bold text-xs flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                <Activity className="w-3 h-3" />
-                <span>Capturar SV (Pre-Nota)</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-950/80 px-3 sm:px-6 pt-2 text-xs font-semibold gap-1.5 overflow-x-auto scrollbar-none shrink-0 min-h-[44px]">
+        {/* Pinned Tab Navigation */}
+        <div className="flex items-center border-b border-slate-200 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-950/90 px-2.5 sm:px-5 pt-1.5 text-xs font-semibold gap-1 overflow-x-auto overscroll-x-contain touch-pan-x scrollbar-none shrink-0 min-h-[42px]">
           <button
+            type="button"
             onClick={() => setActiveTab('labs')}
             className={`py-2 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'labs'
@@ -780,6 +605,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('studies')}
             className={`py-2 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'studies'
@@ -788,13 +614,14 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
             }`}
           >
             <FileImage className="w-3.5 h-3.5 shrink-0" />
-            <span>Gabinete e Imagen ({patient.studies?.length || 0})</span>
+            <span>Gabinete ({patient.studies?.length || 0})</span>
             {patient.studies?.some((s) => s.isNew) && (
               <span className="w-2 h-2 rounded-full bg-cyan-500 ring-2 ring-cyan-500/30" />
             )}
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('meds')}
             className={`py-2 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'meds'
@@ -803,10 +630,11 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
             }`}
           >
             <Pill className="w-3.5 h-3.5 shrink-0" />
-            <span>Antibióticos e Indicaciones ({patient.medications.length})</span>
+            <span>Indicaciones ({patient.medications.length})</span>
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('pendings')}
             className={`py-2 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'pendings'
@@ -819,6 +647,7 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('notes')}
             className={`py-2 px-3 border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
               activeTab === 'notes'
@@ -831,8 +660,199 @@ export const PatientDetailModal: React.FC<PatientDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3.5 sm:p-6 space-y-5 bg-slate-50/50 dark:bg-slate-900">
+        {/* Independent Scrollable Body (Includes Tags/Badges, Signos Vitales, and Active Tab Content) */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y p-3 sm:p-5 space-y-4 bg-slate-50/50 dark:bg-slate-900">
+          {/* Patient Clinical Tags & Vitals Card (Scrolls naturally with touch on Mobile & Tablet) */}
+          <div className="bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-xl p-2.5 sm:p-3.5 space-y-2.5 shadow-2xs">
+            {/* Badges & Tags Row */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${getCodeStatusInfo(patient.codeStatus).badgeClass}`}>
+                {getCodeStatusInfo(patient.codeStatus).codeLabel}
+              </span>
+              {getRespiratorySupportFlags(patient).isIntubated && (
+                <span className="px-2 py-0.5 rounded bg-rose-700 text-white border border-rose-800 text-[10px] font-extrabold uppercase">
+                  INTUBADO
+                </span>
+              )}
+              {getRespiratorySupportFlags(patient).isCpap && (
+                <span className="px-2 py-0.5 rounded bg-sky-600 text-white border border-sky-700 text-[10px] font-extrabold uppercase">
+                  CPAP
+                </span>
+              )}
+              {getNonRedundantClinicalTags(patient.clinicalTags).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => onOpenTagSelector && onOpenTagSelector(patient)}
+                  className="bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-700 text-teal-700 dark:text-teal-300 border border-slate-300 dark:border-slate-700 text-[10px] px-2 py-0.5 rounded font-semibold cursor-pointer transition-colors"
+                  title="Clic para gestionar etiquetas del paciente"
+                >
+                  {t}
+                </button>
+              ))}
+              {onOpenTagSelector && (
+                <button
+                  type="button"
+                  onClick={() => onOpenTagSelector(patient)}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 text-teal-700 dark:text-teal-300 border border-teal-300 dark:border-teal-800 text-[10px] font-bold cursor-pointer transition-colors"
+                  title="Agregar o quitar etiquetas clínicas sincronizadas"
+                >
+                  <Tag className="w-3 h-3" />
+                  <span>+ Etiquetas</span>
+                </button>
+              )}
+            </div>
+
+            {/* Signos Vitales Actuales (Con Captura Pre-Nota para el Pase de Visita) */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-700/70">
+              {isEditingVitals ? (
+                <form onSubmit={handleSavePreNoteVitals} className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-teal-700 dark:text-teal-300">
+                      <Activity className="w-3.5 h-3.5" />
+                      <span>Capturar Signos Vitales (Pre-Nota / Pase de Visita)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingVitals(false)}
+                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-3 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-extrabold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Guardar SV</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 text-xs">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block">TA (mmHg)</span>
+                      <input
+                        type="text"
+                        value={vitalsDraft.bp}
+                        onChange={(e) => setVitalsDraft((p) => ({ ...p, bp: e.target.value }))}
+                        autoFocus
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block">FC (lpm)</span>
+                      <input
+                        type="text"
+                        value={vitalsDraft.hr}
+                        onChange={(e) => setVitalsDraft((p) => ({ ...p, hr: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block">FR (rpm)</span>
+                      <input
+                        type="text"
+                        value={vitalsDraft.rr}
+                        onChange={(e) => setVitalsDraft((p) => ({ ...p, rr: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block">Temp (°C)</span>
+                      <input
+                        type="text"
+                        value={vitalsDraft.temp}
+                        onChange={(e) => setVitalsDraft((p) => ({ ...p, temp: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block">SpO2 (%)</span>
+                      <input
+                        type="text"
+                        value={vitalsDraft.spo2}
+                        onChange={(e) => setVitalsDraft((p) => ({ ...p, spo2: e.target.value }))}
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block">Glucemia</span>
+                      <input
+                        type="text"
+                        value={vitalsDraft.glucose}
+                        onChange={(e) => setVitalsDraft((p) => ({ ...p, glucose: e.target.value }))}
+                        placeholder="mg/dL"
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 block">Peso (kg)</span>
+                      <input
+                        type="text"
+                        value={vitalsDraft.weightKg}
+                        onChange={(e) => setVitalsDraft((p) => ({ ...p, weightKg: e.target.value }))}
+                        placeholder="kg"
+                        className="w-full px-2 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-md font-mono text-center font-bold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                  <div
+                    onClick={() => setIsEditingVitals(true)}
+                    title="Clic para ingresar o actualizar Signos Vitales antes de la Nota de Evolución"
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-700 dark:text-slate-300 cursor-pointer hover:text-teal-600 dark:hover:text-teal-400"
+                  >
+                    <span className="font-sans font-extrabold text-teal-700 dark:text-teal-400 uppercase flex items-center gap-1">
+                      <Activity className="w-3.5 h-3.5" />
+                      <span>SV:</span>
+                    </span>
+                    {patient.vitals?.isNew && (
+                      <span className="px-1.5 py-0.5 rounded bg-teal-600 text-white font-sans font-extrabold text-[10px] uppercase">
+                        Pre-Nota {patient.vitals.updatedAt || ''}
+                      </span>
+                    )}
+                    <span>
+                      TA <strong>{patient.vitals?.bp || '-'}</strong>
+                    </span>
+                    <span>
+                      FC <strong>{patient.vitals?.hr || '-'} lpm</strong>
+                    </span>
+                    <span>
+                      FR <strong>{patient.vitals?.rr || '-'} rpm</strong>
+                    </span>
+                    <span>
+                      Temp <strong>{patient.vitals?.temp || '-'}°C</strong>
+                    </span>
+                    <span>
+                      SpO2 <strong>{patient.vitals?.spo2 || '-'}%</strong>
+                    </span>
+                    {patient.vitals?.glucose && (
+                      <span>
+                        Gluc <strong>{patient.vitals.glucose} mg/dL</strong>
+                      </span>
+                    )}
+                    {patient.vitals?.weightKg && (
+                      <span>
+                        Peso <strong>{patient.vitals.weightKg} kg</strong>
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingVitals(true)}
+                    className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-sans font-bold text-xs flex items-center gap-1 cursor-pointer shrink-0"
+                  >
+                    <Activity className="w-3 h-3" />
+                    <span>Capturar SV (Pre-Nota)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* TAB 1: LABORATORIOS & TENDENCIAS */}
           {activeTab === 'labs' && (
             <div className="space-y-6">

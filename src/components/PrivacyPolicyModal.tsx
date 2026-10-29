@@ -33,17 +33,22 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[75] bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden my-6 flex flex-col max-h-[90vh] text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-[80] bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-5 overflow-hidden overscroll-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 duration-200">
         {/* Top Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-teal-950/70 to-slate-900 text-white p-5 sm:p-6 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3">
+        <div className="bg-gradient-to-r from-slate-900 via-teal-950/70 to-slate-900 text-white p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="p-2.5 bg-teal-500/20 text-teal-400 border border-teal-500/30 rounded-2xl shrink-0">
               <ShieldCheck className="w-6 h-6" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-extrabold text-white">
+                <h2 className="text-sm sm:text-lg font-extrabold text-white">
                   {activeTab === 'privacy'
                     ? 'Política de Privacidad — ResiMed MI'
                     : 'Condiciones del Servicio — ResiMed MI'}
@@ -52,7 +57,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                   Google API Limited Use & NOM-004
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">
                 Información oficial sobre el tratamiento de datos clínicos, sincronización en Google Drive y confidencialidad médica.
               </p>
             </div>
@@ -61,9 +66,10 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Cerrar política de privacidad"
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 text-rose-400" />
+            <span>Cerrar</span>
           </button>
         </div>
 
@@ -110,7 +116,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
         </div>
 
         {/* Document Body */}
-        <div className="p-5 sm:p-7 overflow-y-auto space-y-5 text-xs sm:text-sm leading-relaxed">
+        <div className="flex-1 min-h-0 p-4 sm:p-7 overflow-y-auto overscroll-contain touch-pan-y space-y-5 text-xs sm:text-sm leading-relaxed">
           {activeTab === 'privacy' ? (
             <>
               <div className="p-4 rounded-2xl bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/70 space-y-2">

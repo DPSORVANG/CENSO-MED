@@ -209,8 +209,8 @@ export const CensusDashboard: React.FC<CensusDashboardProps> = ({
         return;
       }
       const rect = el.getBoundingClientRect();
-      // Header is 48px tall; once the main search bar scrolls above the header, it has disappeared
-      const outOfView = rect.bottom <= 50;
+      // Header + Drive strip is ~76px tall; once the main search bar scrolls above it, it has disappeared
+      const outOfView = rect.bottom <= 80;
       setIsDesktopTopBarOutOfView(outOfView);
       if (!outOfView) {
         setIsFloatingFilterOpen(false);
@@ -218,10 +218,10 @@ export const CensusDashboard: React.FC<CensusDashboardProps> = ({
     };
 
     updateScrollAndViewport();
-    window.addEventListener('scroll', updateScrollAndViewport, { passive: true });
+    window.addEventListener('scroll', updateScrollAndViewport, { passive: true, capture: true });
     window.addEventListener('resize', updateScrollAndViewport);
     return () => {
-      window.removeEventListener('scroll', updateScrollAndViewport);
+      window.removeEventListener('scroll', updateScrollAndViewport, true);
       window.removeEventListener('resize', updateScrollAndViewport);
     };
   }, []);
@@ -1262,20 +1262,20 @@ export const CensusDashboard: React.FC<CensusDashboardProps> = ({
   };
 
   return (
-    <div className="flex flex-col xl:flex-row items-stretch min-h-[calc(100vh-48px)] w-full max-w-full overflow-x-clip relative">
-      {/* DESKTOP (xl+): DOCKED LEFT VERTICAL SIDEBAR (Collapsible between sleek icon+count bar and full rail) */}
+    <div className="flex-1 min-h-0 flex flex-col xl:flex-row items-stretch h-full w-full max-w-full overflow-hidden relative">
+      {/* DESKTOP (xl+): DOCKED LEFT VERTICAL SIDEBAR (Stationary, never moves when scrolling patient census) */}
       <aside
         aria-label="Filtros rápidos de censo y panel inferior de configuración"
         className={`hidden xl:flex ${
           isSidebarCollapsed ? 'xl:w-[68px] px-1.5' : 'xl:w-46 px-2.5'
-        } shrink-0 bg-slate-900 text-slate-200 border-r border-slate-800 sticky top-[48px] h-[calc(100vh-48px)] self-start z-40 py-2.5 flex-col justify-between gap-1.5 overflow-y-auto scrollbar-none transition-all duration-200 print:hidden`}
+        } shrink-0 bg-slate-900 text-slate-200 border-r border-slate-800 h-full z-30 py-2.5 flex-col justify-between gap-1.5 overflow-y-auto overscroll-contain scrollbar-none transition-all duration-200 print:hidden`}
       >
         {renderSidebarContent(false)}
       </aside>
 
       {/* MOBILE & TABLET (< xl, Both Portrait & Landscape): APP-STYLE SLIDE-OVER LATERAL DRAWER */}
       {isMobileDrawerOpen && (
-        <div className="xl:hidden fixed inset-0 z-[75] flex print:hidden">
+        <div className="xl:hidden fixed inset-0 z-[75] flex overflow-hidden overscroll-none print:hidden">
           <div
             onClick={onCloseMobileDrawer}
             className="fixed inset-0 bg-slate-950/65 backdrop-blur-xs"
@@ -1283,15 +1283,15 @@ export const CensusDashboard: React.FC<CensusDashboardProps> = ({
           />
           <aside
             aria-label="Panel lateral expandido de censo y ajustes"
-            className="relative z-10 w-64 max-w-[82vw] h-full bg-slate-900 text-slate-200 border-r border-slate-800 px-3 py-3 flex flex-col justify-between gap-2 overflow-y-auto shadow-2xl"
+            className="relative z-10 w-64 max-w-[82vw] h-full bg-slate-900 text-slate-200 border-r border-slate-800 px-3 py-3 flex flex-col justify-between gap-2 overflow-y-auto overscroll-contain touch-pan-y shadow-2xl"
           >
             {renderSidebarContent(true)}
           </aside>
         </div>
       )}
 
-      {/* MAIN CENSUS WORKSPACE */}
-      <div className="flex-1 w-full min-w-0 p-2 sm:p-3.5 lg:p-5 space-y-2.5">
+      {/* MAIN CENSUS WORKSPACE (Independent Scroll Container) */}
+      <div className="flex-1 min-h-0 h-full w-full min-w-0 overflow-y-auto overscroll-contain touch-pan-y p-2 sm:p-3.5 lg:p-5 pb-20 sm:pb-10 space-y-2.5">
         {/* MOBILE & TABLET (< xl): Ultra-Compact Active Filter Status Pill Strip (Only shown if a filter/search is active) */}
         {hasAnyActiveSearchOrFilter && (
           <div className="xl:hidden flex flex-wrap items-center justify-between gap-1.5 px-2.5 py-1.5 bg-slate-900 text-slate-100 rounded-xl border border-slate-800 text-xs print:hidden">

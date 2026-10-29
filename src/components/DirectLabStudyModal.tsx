@@ -293,24 +293,29 @@ export const DirectLabStudyModal: React.FC<DirectLabStudyModalProps> = ({
   const activePanels = LAB_PANELS_CATALOG.filter((p) => selectedPanelIds.includes(p.id));
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col max-h-[93vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 z-[70] bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-1.5 sm:p-4 overflow-hidden overscroll-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white dark:bg-slate-900 w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-[94dvh] sm:h-auto sm:max-h-[92dvh] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Modal Top Bar */}
-        <div className="px-4 sm:px-5 py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <span className="p-2 bg-teal-500/20 border border-teal-500/30 rounded-xl">
+        <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="p-2 bg-teal-500/20 border border-teal-500/30 rounded-xl shrink-0">
               {entryType === 'lab' ? (
                 <FlaskConical className="w-5 h-5 text-teal-400" />
               ) : (
                 <FileImage className="w-5 h-5 text-cyan-400" />
               )}
             </span>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold leading-tight">
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <h2 className="text-sm sm:text-base font-bold leading-tight truncate">
                 Ingreso Rápido de Paraclínicos por Paneles
               </h2>
               {/* Color Symbol Badge + Popover instead of noisy text banner */}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-extrabold">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-[10px] font-extrabold">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                 DISTINTIVO NUEVO
               </span>
@@ -323,16 +328,16 @@ export const DirectLabStudyModal: React.FC<DirectLabStudyModalProps> = ({
 
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg text-xs font-bold border border-slate-700 transition-colors cursor-pointer shrink-0"
             title="Cerrar cuadro (Esc)"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-rose-400" />
             <span>Cerrar</span>
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-3.5 sm:p-5 overflow-y-auto space-y-4 flex-1">
+        <div className="p-3.5 sm:p-5 min-h-0 overflow-y-auto overscroll-contain touch-pan-y space-y-4 flex-1">
           {/* Patient + Date/Time Compact Header Bar */}
           <div className="bg-slate-50 dark:bg-slate-800/70 p-3 rounded-xl border border-slate-200 dark:border-slate-700/80 grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             <div className="md:col-span-6">

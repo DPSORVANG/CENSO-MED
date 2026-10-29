@@ -123,17 +123,22 @@ export const TagSelectorModal: React.FC<TagSelectorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 z-[75] bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 overflow-hidden overscroll-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white dark:bg-slate-900 w-full max-w-xl max-h-[92dvh] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-2">
-            <span className="p-2 bg-teal-500/20 text-teal-400 rounded-xl">
+        <div className="px-4 sm:px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="p-2 bg-teal-500/20 text-teal-400 rounded-xl shrink-0">
               <Tag className="w-5 h-5" />
             </span>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-sm font-bold">
+                <h3 className="text-sm font-bold truncate">
                   Etiquetas Clínicas del Paciente
                 </h3>
                 <InfoPopover
@@ -141,21 +146,23 @@ export const TagSelectorModal: React.FC<TagSelectorModalProps> = ({
                   content="Selecciona las alertas y dispositivos activos (ej. VMI / Intubación, CPAP / BiPAP, Aislamiento, CVC) para que se reflejen en el Censo Activo, el Expediente Clínico y los contadores laterales."
                 />
               </div>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-400 truncate">
                 {patient.name} • <strong>{patient.bed}</strong>
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 text-rose-400" />
+            <span>Cerrar</span>
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 space-y-4">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y p-4 sm:p-5 space-y-4">
           {/* Active Tags Preview */}
           <div className="bg-slate-50 dark:bg-slate-850 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">

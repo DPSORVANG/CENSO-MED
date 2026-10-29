@@ -91,7 +91,9 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
 
   // View state: split screen (Ayer vs Hoy) or full preview
   const [activeSideTab, setActiveSideTab] = useState<'editor' | 'preview'>('editor');
-  const [showYesterdayPanel, setShowYesterdayPanel] = useState<boolean>(true);
+  const [showYesterdayPanel, setShowYesterdayPanel] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
 
   // Note Type
   const [noteType] = useState<
@@ -752,30 +754,36 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs flex items-center justify-center pt-14 px-2 pb-2 sm:px-4 sm:pb-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-7xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col h-[86vh] overflow-hidden">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-3 overflow-hidden overscroll-none"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 w-full max-w-7xl rounded-t-2xl sm:rounded-2xl shadow-2xl border-t sm:border border-slate-200 dark:border-slate-800 flex flex-col h-[95dvh] sm:h-[92dvh] max-h-[95dvh] overflow-hidden"
+      >
         {/* Top Header */}
-        <div className="px-5 py-3 bg-slate-900 text-white flex flex-wrap items-center justify-between border-b border-slate-800 gap-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/20 text-teal-400 border border-teal-500/30 flex items-center justify-center">
-              <FileText className="w-5 h-5" />
+        <div className="px-3 sm:px-5 py-2.5 sm:py-3 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 gap-2 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-teal-500/20 text-teal-400 border border-teal-500/30 flex items-center justify-center shrink-0">
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white leading-tight">
-                  Nota de Evolución e Indicaciones Integrales
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h2 className="text-xs sm:text-base font-bold text-white leading-tight truncate">
+                  Nota de Evolución e Indicaciones
                 </h2>
-                <span className="bg-slate-800 text-teal-300 font-mono text-xs px-2 py-0.5 rounded border border-slate-700">
+                <span className="bg-slate-800 text-teal-300 font-mono text-[11px] sm:text-xs px-2 py-0.5 rounded border border-slate-700 shrink-0">
                   {patient.bed}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                {patient.name} ({patient.age}a) • Día {stayDays} de estancia • {patient.service} • Sincroniza Censo, Expediente y Hoja de Guardia
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
+                {patient.name} ({patient.age}a) • Día {stayDays} • {patient.service}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {onBackToExpediente && (
               <button
                 type="button"
@@ -783,45 +791,47 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
                   if (onUpdatePatient) onUpdatePatient(buildUpdatedPatientObject());
                   onBackToExpediente(buildUpdatedPatientObject());
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 rounded-lg text-xs font-bold border border-teal-500/40 transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 rounded-lg text-xs font-bold border border-teal-500/40 transition-colors cursor-pointer"
                 title="Guardar cambios y regresar al Expediente Clínico del paciente"
               >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Regresar al Expediente</span>
+                <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden md:inline">Regresar al Expediente</span>
+                <span className="md:hidden">Expediente</span>
               </button>
             )}
 
             <button
               type="button"
               onClick={() => setShowYesterdayPanel(!showYesterdayPanel)}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
                 showYesterdayPanel
                   ? 'bg-slate-800 text-teal-300 border-teal-500/40'
                   : 'bg-slate-800/60 text-slate-400 border-slate-700'
               }`}
               title="Mostrar / Ocultar panel con la nota previa para comparar"
             >
-              <History className="w-3.5 h-3.5 text-teal-400" />
-              <span>{showYesterdayPanel ? 'Ocultar Nota Previa' : 'Ver Nota Previa'}</span>
+              <History className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+              <span className="hidden sm:inline">{showYesterdayPanel ? 'Ocultar Nota Previa' : 'Ver Nota Previa'}</span>
+              <span className="sm:hidden">Previa</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-xs font-semibold border border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-200 hover:text-white rounded-lg text-xs font-bold border border-rose-500/40 transition-colors cursor-pointer"
               title="Cerrar al Censo Activo (Esc)"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 shrink-0" />
               <span>Cerrar</span>
             </button>
           </div>
         </div>
 
         {/* Modal Main Area: Split Screen (Ayer vs Hoy) */}
-        <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 dark:divide-slate-800">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col lg:grid lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 dark:divide-slate-800">
           {/* LEFT PANEL: Nota del Día Anterior */}
           {showYesterdayPanel && (
-            <div className="lg:col-span-3 bg-slate-50 dark:bg-slate-950 p-3.5 flex flex-col justify-between overflow-y-auto space-y-3 border-r border-slate-200 dark:border-slate-800">
+            <div className="lg:col-span-3 max-h-[32vh] lg:max-h-none shrink-0 bg-slate-50 dark:bg-slate-950 p-3.5 flex flex-col justify-between overflow-y-auto overscroll-contain touch-pan-y space-y-3 border-r border-slate-200 dark:border-slate-800">
               <div className="space-y-3">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
@@ -888,9 +898,9 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
           )}
 
           {/* RIGHT PANEL: Editor de Hoy (SOAP estructurado y sincronizado) */}
-          <div className={`${showYesterdayPanel ? 'lg:col-span-9' : 'lg:col-span-12'} flex flex-col overflow-hidden bg-white dark:bg-slate-900`}>
+          <div className={`${showYesterdayPanel ? 'lg:col-span-9' : 'lg:col-span-12'} flex-1 min-h-0 flex flex-col overflow-hidden bg-white dark:bg-slate-900`}>
             {/* Sub-Header with Section switcher / Preview toggle */}
-            <div className="px-5 py-2 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+            <div className="px-3 sm:px-5 py-2 bg-slate-50 dark:bg-slate-850 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-xs">
                   Nota de Evolución (NOM-004):
@@ -902,11 +912,11 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
               </div>
 
               {/* View mode toggle: Editor vs Final Preview */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={handleSyncPatientChanges}
-                  className={`px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 border transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5 border transition-all cursor-pointer ${
                     syncSuccess
                       ? 'bg-emerald-600 text-white border-emerald-600'
                       : 'bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-800 hover:bg-teal-100'
@@ -914,14 +924,14 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
                   title="Actualiza diagnósticos, medicamentos, dieta, soluciones y pendientes en el Censo Activo, Censo para Imprimir y Expediente"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${syncSuccess ? 'animate-spin' : ''}`} />
-                  <span>{syncSuccess ? '¡Censo y Expediente Actualizados!' : 'Sincronizar al Censo'}</span>
+                  <span>{syncSuccess ? '¡Actualizado!' : 'Sincronizar al Censo'}</span>
                 </button>
 
                 <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-200/60 dark:bg-slate-800 text-xs">
                   <button
                     type="button"
                     onClick={() => setActiveSideTab('editor')}
-                    className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 sm:px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
                       activeSideTab === 'editor'
                         ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-300 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400'
@@ -932,13 +942,13 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setActiveSideTab('preview')}
-                    className={`px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 sm:px-3 py-1 rounded-md font-semibold transition-all cursor-pointer ${
                       activeSideTab === 'preview'
                         ? 'bg-white dark:bg-slate-700 text-teal-600 dark:text-teal-300 shadow-xs'
                         : 'text-slate-600 dark:text-slate-400'
                     }`}
                   >
-                    Texto Final para Copiar
+                    Texto Final
                   </button>
                 </div>
               </div>
@@ -946,7 +956,7 @@ export const NoteGeneratorModal: React.FC<NoteGeneratorModalProps> = ({
 
             {/* TAB CONTENT 1: Structured SOAP Editor */}
             {activeSideTab === 'editor' ? (
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y p-3.5 sm:p-5 space-y-4">
                 {/* Paraclínicos Nuevos Notificación */}
                 {hasNewParaclinics && (
                   <div className="bg-teal-500/10 border border-teal-500/40 rounded-xl p-2.5 flex items-center justify-between gap-3 text-xs">

@@ -431,37 +431,47 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white p-6 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-teal-500/20 text-teal-400 border border-teal-500/30 rounded-2xl">
-              <Cloud className="w-6 h-6" />
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-[70] bg-slate-950/85 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden overscroll-none"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 rounded-t-2xl sm:rounded-3xl w-full max-w-2xl max-h-[92dvh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+      >
+        {/* Header (Pinned) */}
+        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white px-4 py-3.5 sm:px-6 sm:py-4 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-2.5 bg-teal-500/20 text-teal-400 border border-teal-500/30 rounded-2xl shrink-0">
+              <Cloud className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white">
-                  Google Drive Institucional (Fuente Única de Verdad)
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h2 className="text-sm sm:text-base font-bold text-white leading-tight">
+                  Google Drive Institucional
                 </h2>
                 <span className="bg-teal-950 text-teal-300 border border-teal-800 text-[10px] px-2 py-0.5 rounded-full font-mono">
                   En Tiempo Real
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Cada cuenta de Google Drive mantiene su propio censo aislado. Todo cambio o baja se guarda directamente en Drive.
+              <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 line-clamp-2">
+                Cada cuenta de Google Drive mantiene su propio censo aislado y sincronizado.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-200 hover:text-white border border-rose-500/40 rounded-xl text-xs font-bold transition-colors shrink-0 cursor-pointer"
+            title="Cerrar ventana"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 shrink-0" />
+            <span>Cerrar</span>
           </button>
         </div>
 
-        <div className="p-6 space-y-5 text-xs">
+        {/* Scrollable Body */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y p-4 sm:p-6 space-y-4 text-xs">
           {/* Network Status Banner */}
           <div
             className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
@@ -758,23 +768,27 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="bg-slate-50 dark:bg-slate-850 p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <span className="text-[11px] text-slate-400">
-            Sincronización Institucional Basada en Google Drive v2.0
+        {/* Footer (Pinned) */}
+        <div className="bg-slate-50 dark:bg-slate-850 px-4 py-3 sm:px-6 sm:py-3.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+          <span className="text-[11px] text-slate-400 truncate">
+            Sincronización Institucional en Google Drive v2.1
           </span>
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-slate-200 dark:bg-slate-750 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl transition-colors cursor-pointer"
+            className="px-4 py-2 bg-slate-200 dark:bg-slate-750 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs transition-colors shrink-0 cursor-pointer"
           >
-            Cerrar
+            Cerrar Ventana
           </button>
         </div>
       </div>
 
       {/* Confirmation Dialog */}
       {confirmDialog.isOpen && (
-        <div className="fixed inset-0 z-60 bg-black/60 flex items-center justify-center p-4 animate-in fade-in">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4 animate-in fade-in"
+        >
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center gap-3 text-slate-900 dark:text-white">
               <div className="p-2.5 rounded-xl bg-teal-500/20 text-teal-400">

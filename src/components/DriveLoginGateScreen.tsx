@@ -91,8 +91,8 @@ export const DriveLoginGateScreen: React.FC<DriveLoginGateScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-4 sm:p-6">
-      <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+    <div className="h-dvh max-h-dvh w-full overflow-y-auto overscroll-contain touch-pan-y bg-slate-950 text-slate-100 flex flex-col justify-start sm:justify-center items-center p-3 sm:p-6">
+      <div className="w-full max-w-xl my-auto bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden shrink-0">
         {/* Top Institutional Banner */}
         <div className="bg-gradient-to-r from-slate-900 via-teal-950/60 to-slate-900 p-6 sm:p-7 border-b border-slate-800 text-center space-y-3">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-inner">
