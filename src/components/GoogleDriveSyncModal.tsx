@@ -63,7 +63,13 @@ interface GoogleDriveSyncModalProps {
   onRequestAdminMode: () => void;
   onDataSynced: () => void;
   onDriveSessionChanged?: () => void;
-  onAuthenticatedWithDrive?: (accessToken: string, email: string, displayName: string) => Promise<void>;
+  onAuthenticatedWithDrive?: (
+    accessToken: string,
+    uid: string,
+    email: string,
+    displayName: string,
+    hasDriveScope?: boolean
+  ) => Promise<void>;
   showToast: (msg: string) => void;
   isOnline?: boolean;
 }
@@ -109,14 +115,20 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
     setSavedUser(getSavedDriveUser());
 
     const checkToken = async () => {
+      const currentSaved = getSavedDriveUser();
       const token = await getAccessToken();
-      if (token) {
+      if (token && currentSaved?.hasDriveScope !== false) {
         setAccessToken(token);
         if (isOnline) {
           fetchDriveFileInfo(token);
         }
       } else {
         setAccessToken(null);
+        if (currentSaved && currentSaved.hasDriveScope === false) {
+          setErrorMsg(
+            'Falta conceder el permiso de acceso a Google Drive (drive.file) para esta cuenta. Haz clic en "Autorizar Permisos de Google Drive" y marca la casilla en la ventana de Google.'
+          );
+        }
       }
     };
     checkToken();
@@ -132,6 +144,12 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
       if (e?.message === 'DRIVE_TOKEN_EXPIRED') {
         setAccessToken(null);
         setErrorMsg('La sesión de Google Drive expiró. Vuelve a iniciar sesión para sincronizar.');
+      } else if (e?.message === 'DRIVE_SCOPE_INSUFFICIENT') {
+        setAccessToken(null);
+        setSavedUser(getSavedDriveUser());
+        setErrorMsg(
+          'Permisos insuficientes de Google Drive (403 ACCESS_TOKEN_SCOPE_INSUFFICIENT). Haz clic en "Autorizar Permisos de Google Drive" y asegúrate de marcar la casilla de acceso a archivos de la aplicación.'
+        );
       } else {
         console.error('Error al consultar Drive:', e);
         setErrorMsg(e.message || 'No se pudo consultar Google Drive.');
@@ -141,19 +159,40 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
     }
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (forceConsent = false) => {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const res = await googleSignIn();
+      const res = await googleSignIn({ forceConsent });
       if (res) {
         const email = res.user.email || res.user.uid;
         const displayName = res.user.displayName || email;
-        setSavedUser({ email, displayName, uid: res.user.uid });
-        setAccessToken(res.accessToken);
+        setSavedUser({
+          email,
+          displayName,
+          uid: res.user.uid,
+          hasDriveScope: res.hasDriveScope,
+        });
+
         if (onAuthenticatedWithDrive) {
-          await onAuthenticatedWithDrive(res.accessToken, email, displayName);
+          await onAuthenticatedWithDrive(
+            res.accessToken,
+            res.user.uid,
+            email,
+            displayName,
+            res.hasDriveScope
+          );
         }
+
+        if (!res.hasDriveScope) {
+          setAccessToken(null);
+          setErrorMsg(
+            'Iniciaste sesión con tu cuenta, pero no se marcó la casilla de permiso de Google Drive. Haz clic en "Autorizar Permisos de Google Drive" y marca la casilla en la pantalla de Google.'
+          );
+          return;
+        }
+
+        setAccessToken(res.accessToken);
         await fetchDriveFileInfo(res.accessToken);
         showToast(`Conectado a Google Drive (${email}) • Sincronización simultánea activa`);
       }
@@ -161,7 +200,14 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
       const code = e?.code || '';
       const msg = e?.message || '';
       if (code !== 'auth/popup-closed-by-user') {
-        setErrorMsg(msg || 'Error al autenticar con Google');
+        if (msg === 'DRIVE_SCOPE_INSUFFICIENT') {
+          setAccessToken(null);
+          setErrorMsg(
+            'Permisos insuficientes de Google Drive (403). Haz clic en "Autorizar Permisos de Google Drive" y marca la casilla de acceso a archivos.'
+          );
+        } else {
+          setErrorMsg(msg || 'Error al autenticar con Google');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -519,7 +565,7 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
 
               <div className="pt-2 flex flex-col items-center gap-3">
                 <button
-                  onClick={handleLogin}
+                  onClick={() => handleLogin(Boolean(savedUser && savedUser.hasDriveScope === false))}
                   disabled={isLoading || !isOnline}
                   className="flex items-center gap-3 px-6 py-2.5 bg-white text-slate-700 hover:bg-slate-50 border border-slate-300 rounded-xl font-semibold text-xs shadow-xs transition-all cursor-pointer disabled:opacity-50"
                 >
@@ -541,8 +587,23 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
                       d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
                     />
                   </svg>
-                  <span>{isLoading ? 'Conectando...' : 'Iniciar sesión con Google Drive'}</span>
+                  <span>
+                    {isLoading
+                      ? 'Conectando...'
+                      : savedUser && savedUser.hasDriveScope === false
+                      ? 'Autorizar Permisos de Google Drive'
+                      : 'Iniciar sesión con Google Drive'}
+                  </span>
                 </button>
+                {savedUser && (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-[11px] text-rose-500 hover:underline font-semibold cursor-pointer"
+                  >
+                    Cerrar sesión de {savedUser.email} / Cambiar de cuenta
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -716,6 +777,16 @@ export const GoogleDriveSyncModal: React.FC<GoogleDriveSyncModalProps> = ({
               <div className="flex items-start gap-2 font-semibold">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                 <span>{errorMsg}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleLogin(true)}
+                  disabled={isLoading || !isOnline}
+                  className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold text-xs cursor-pointer"
+                >
+                  Autorizar Permisos de Google Drive (Re-autenticar)
+                </button>
               </div>
             </div>
           )}

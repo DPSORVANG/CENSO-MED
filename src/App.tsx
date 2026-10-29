@@ -40,7 +40,10 @@ import {
   recordDeletedPatient,
   unmarkDeletedPatient,
   exportFullBackup,
+  getActiveAccountNamespace,
   setActiveAccountNamespace,
+  activateAuthenticatedUserNamespace,
+  UNAUTHENTICATED_NAMESPACE,
   resetDemoDataInCurrentNamespace,
   resetBasicDemoDataInCurrentNamespace,
   clearAllPatientsInCurrentNamespace,
@@ -63,11 +66,52 @@ import {
   findDriveCensusFile,
   downloadCensusFromDrive,
   saveCensusToDrive,
+  googleLogout,
+  initAuth,
 } from './utils/googleDriveSync.ts';
 import { WifiOff, GitMerge, Cloud, LogOut } from 'lucide-react';
 
+function ensureConsistentInitialSession(): WorkspaceMode {
+  if (
+    typeof window !== 'undefined' &&
+    localStorage.getItem('resimed_stress_test_100_autoseed_v1') === 'done' &&
+    localStorage.getItem('resimed_cleaned_dev_autoseed_v1') !== 'done'
+  ) {
+    localStorage.setItem('resimed_cleaned_dev_autoseed_v1', 'done');
+    localStorage.removeItem('resimed_stress_test_100_autoseed_v1');
+    if (getWorkspaceMode() === 'demo') {
+      setActiveAccountNamespace('local');
+      setWorkspaceMode('local');
+    }
+  }
+
+  const mode = getWorkspaceMode();
+  const savedUser = getSavedDriveUser();
+
+  if (mode === 'drive') {
+    if (savedUser && (savedUser.uid || savedUser.email)) {
+      activateAuthenticatedUserNamespace(savedUser.uid, savedUser.email);
+      return 'drive';
+    } else {
+      setWorkspaceMode(null);
+      setActiveAccountNamespace(UNAUTHENTICATED_NAMESPACE);
+      return null;
+    }
+  } else if (mode === 'local') {
+    setActiveAccountNamespace('local');
+    return 'local';
+  } else if (mode === 'demo') {
+    setActiveAccountNamespace('demo');
+    return 'demo';
+  } else {
+    setActiveAccountNamespace(UNAUTHENTICATED_NAMESPACE);
+    return null;
+  }
+}
+
 export default function App() {
-  const [workspaceMode, setWorkspaceModeState] = useState<WorkspaceMode>(() => getWorkspaceMode());
+  const [workspaceMode, setWorkspaceModeState] = useState<WorkspaceMode>(() => ensureConsistentInitialSession());
+  const [activeNamespace, setActiveNamespace] = useState<string>(() => getActiveAccountNamespace());
   const [patients, setPatients] = useState<Patient[]>(() => loadPatients());
   const [notes, setNotes] = useState<ClinicalNoteRecord[]>(() => loadNotes());
   const [profile, setProfile] = useState<ResidentProfile>(() => loadProfile());
@@ -78,6 +122,9 @@ export default function App() {
     const prof = loadProfile();
     return prof.activeRole !== 'intern';
   });
+
+  // Session epoch counter to invalidate in-flight async operations when switching accounts or logging out
+  const sessionEpochRef = useRef<number>(0);
 
   // Admin authorization modal for protected hospital actions (Delete, Discharge, Vault reset)
   const [adminAuthModal, setAdminAuthModal] = useState<{
@@ -146,6 +193,18 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 3200);
   }, []);
 
+  const closeAllTransientModals = useCallback(() => {
+    setSelectedPatientForDetail(null);
+    setSelectedPatientForNote(null);
+    setPatientToEdit(null);
+    setIsPatientFormOpen(false);
+    setIsDirectLabStudyOpen(false);
+    setSelectedPatientForLabStudy(null);
+    setIsTagSelectorOpen(false);
+    setSelectedPatientForTags(null);
+    setIsMobileDrawerOpen(false);
+  }, []);
+
   // Direct Authoritative Push to Google Drive when an online user modifies or deletes data
   // This writes the current local state directly to Google Drive as the new truth without union-merging old Drive patients back.
   const pushAuthoritativeStateToDrive = useCallback(
@@ -155,14 +214,22 @@ export default function App() {
       authoritativeDeleted?: Record<string, string>
     ) => {
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (getWorkspaceMode() !== 'drive') return;
+
+      const myEpoch = sessionEpochRef.current;
+      const myNamespace = getActiveAccountNamespace();
+      if (!myNamespace || myNamespace === UNAUTHENTICATED_NAMESPACE) return;
+
       const token = await getAccessToken();
       if (!token) return;
+      if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== myNamespace) return;
 
       if (isSyncingRef.current) {
-        // Re-schedule slightly later if another network call is in flight
         if (livePushTimeoutRef.current) window.clearTimeout(livePushTimeoutRef.current);
         livePushTimeoutRef.current = window.setTimeout(() => {
-          pushAuthoritativeStateToDrive(authoritativePatients, authoritativeNotes, authoritativeDeleted);
+          if (myEpoch === sessionEpochRef.current && getActiveAccountNamespace() === myNamespace) {
+            pushAuthoritativeStateToDrive(authoritativePatients, authoritativeNotes, authoritativeDeleted);
+          }
         }, 400);
         return;
       }
@@ -172,14 +239,17 @@ export default function App() {
         setIsSyncing(true);
 
         const now = new Date().toISOString();
-        const pts = authoritativePatients ?? loadPatients();
-        const nts = authoritativeNotes ?? loadNotes();
-        const del = authoritativeDeleted ?? loadDeletedPatients();
+        const pts = authoritativePatients ?? loadPatients(myNamespace);
+        const nts = authoritativeNotes ?? loadNotes(myNamespace);
+        const del = authoritativeDeleted ?? loadDeletedPatients(myNamespace);
+        const savedUser = getSavedDriveUser();
 
         const pkg: BackupPackage = {
           version: '1.1.0',
           exportDate: now,
           residentAuthor: profile.name,
+          accountUid: savedUser?.uid,
+          accountEmail: savedUser?.email,
           patients: pts,
           notes: nts,
           deletedPatientIds: del,
@@ -187,18 +257,26 @@ export default function App() {
         };
 
         const uploadRes = await saveCensusToDrive(pkg, token);
+        if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== myNamespace) return;
+
         lastDriveModifiedTimeRef.current = uploadRes.updatedTime || now;
-        clearPendingMutations();
+        clearPendingMutations(myNamespace);
         setPendingChangesCount(0);
-        setLastSyncTime(now);
+        setLastSyncTime(now, myNamespace);
       } catch (e: any) {
-        console.warn('Error al guardar cambio directo en Google Drive:', e);
+        if (e?.message === 'DRIVE_SCOPE_INSUFFICIENT') {
+          showToast('Permisos de Google Drive insuficientes (403). Abre "Cuenta Drive" para autorizar el acceso.');
+        } else {
+          console.warn('Error al guardar cambio directo en Google Drive:', e);
+        }
       } finally {
-        isSyncingRef.current = false;
-        setIsSyncing(false);
+        if (myEpoch === sessionEpochRef.current) {
+          isSyncingRef.current = false;
+          setIsSyncing(false);
+        }
       }
     },
-    [profile.name]
+    [profile.name, showToast]
   );
 
   // Schedule an authoritative push whenever a local change is made while online
@@ -210,11 +288,16 @@ export default function App() {
       overrideDeleted?: Record<string, string>
     ) => {
       if (typeof window === 'undefined') return;
+      if (getWorkspaceMode() !== 'drive') return;
+      const scheduledEpoch = sessionEpochRef.current;
+      const scheduledNamespace = getActiveAccountNamespace();
       if (livePushTimeoutRef.current) {
         window.clearTimeout(livePushTimeoutRef.current);
       }
       livePushTimeoutRef.current = window.setTimeout(() => {
-        pushAuthoritativeStateToDrive(overridePatients, overrideNotes, overrideDeleted);
+        if (scheduledEpoch === sessionEpochRef.current && getActiveAccountNamespace() === scheduledNamespace) {
+          pushAuthoritativeStateToDrive(overridePatients, overrideNotes, overrideDeleted);
+        }
       }, delayMs);
     },
     [pushAuthoritativeStateToDrive]
@@ -224,17 +307,25 @@ export default function App() {
   const syncWithDriveRemote = useCallback(
     async (options?: { forceCheck?: boolean; silent?: boolean }) => {
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+      if (getWorkspaceMode() !== 'drive') return;
       if (isSyncingRef.current) return;
+
+      const myEpoch = sessionEpochRef.current;
+      const myNamespace = getActiveAccountNamespace();
+      if (!myNamespace || myNamespace === UNAUTHENTICATED_NAMESPACE) return;
 
       const token = await getAccessToken();
       if (!token) return;
+      if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== myNamespace) return;
 
       try {
         isSyncingRef.current = true;
         setIsSyncing(true);
 
         const driveFile = await findDriveCensusFile(token);
-        const pendingLocal = getPendingMutations();
+        if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== myNamespace) return;
+
+        const pendingLocal = getPendingMutations(myNamespace);
         const hasPendingLocalMutations = pendingLocal.length > 0;
         const remoteModified = driveFile?.modifiedTime || null;
 
@@ -250,43 +341,55 @@ export default function App() {
         }
 
         const now = new Date().toISOString();
+        const savedUser = getSavedDriveUser();
 
         if (!driveFile) {
-          // No file on Drive yet: create it with current local state
+          // No file on Drive yet: create it with current account's local state
           const initialPkg: BackupPackage = {
             version: '1.1.0',
             exportDate: now,
             residentAuthor: profile.name,
-            patients: loadPatients(),
-            notes: loadNotes(),
-            deletedPatientIds: loadDeletedPatients(),
+            accountUid: savedUser?.uid,
+            accountEmail: savedUser?.email,
+            patients: loadPatients(myNamespace),
+            notes: loadNotes(myNamespace),
+            deletedPatientIds: loadDeletedPatients(myNamespace),
             integrityHash: '',
           };
           const uploadRes = await saveCensusToDrive(initialPkg, token);
+          if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== myNamespace) return;
+
           lastDriveModifiedTimeRef.current = uploadRes.updatedTime || now;
-          clearPendingMutations();
+          clearPendingMutations(myNamespace);
           setPendingChangesCount(0);
-          setLastSyncTime(now);
+          setLastSyncTime(now, myNamespace);
           return;
         }
 
         // Download latest remote snapshot from Drive (with cache: 'no-store' in googleDriveSync.ts)
         const remote = await downloadCensusFromDrive(driveFile.id, token);
+        if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== myNamespace) return;
+
         const remotePackage = remote.data;
+
+        // Cross-account protection: never import a backup stamped with a different user's UID
+        if (remotePackage.accountUid && savedUser?.uid && remotePackage.accountUid !== savedUser.uid) {
+          console.warn('Se bloqueó la importación de un archivo de Drive perteneciente a otro UID.');
+          return;
+        }
 
         if (!hasPendingLocalMutations) {
           // AUTHORITATIVE PULL: This station had no offline edits pending, so Google Drive is 100% authoritative truth!
-          // Any patient deleted or edited on another station is immediately reflected here and never resurrected.
           const remoteDeleted = remotePackage.deletedPatientIds || {};
           const normalizedRemotePatients = (remotePackage.patients || [])
             .filter((p) => !remoteDeleted[p.id])
             .map(normalizePatientRecord);
           const remoteNotes = remotePackage.notes || [];
 
-          const prevCount = loadPatients().length;
-          saveDeletedPatients(remoteDeleted);
-          savePatients(normalizedRemotePatients);
-          saveNotes(remoteNotes);
+          const prevCount = loadPatients(myNamespace).length;
+          saveDeletedPatients(remoteDeleted, myNamespace);
+          savePatients(normalizedRemotePatients, myNamespace);
+          saveNotes(remoteNotes, myNamespace);
           setPatients(normalizedRemotePatients);
           setNotes(remoteNotes);
 
@@ -300,7 +403,7 @@ export default function App() {
           });
 
           lastDriveModifiedTimeRef.current = remote.modifiedTime || remoteModified || now;
-          setLastSyncTime(now);
+          setLastSyncTime(now, myNamespace);
 
           if (!options?.silent) {
             showToast(
@@ -317,18 +420,20 @@ export default function App() {
             version: '1.1.0',
             exportDate: now,
             residentAuthor: profile.name,
-            patients: loadPatients(),
-            notes: loadNotes(),
-            deletedPatientIds: loadDeletedPatients(),
+            accountUid: savedUser?.uid,
+            accountEmail: savedUser?.email,
+            patients: loadPatients(myNamespace),
+            notes: loadNotes(myNamespace),
+            deletedPatientIds: loadDeletedPatients(myNamespace),
             integrityHash: '',
           };
 
           const { merged, stats } = mergeCensusData(currentLocal, remotePackage, profile.name);
           if (merged.deletedPatientIds) {
-            saveDeletedPatients(merged.deletedPatientIds);
+            saveDeletedPatients(merged.deletedPatientIds, myNamespace);
           }
-          savePatients(merged.patients);
-          saveNotes(merged.notes);
+          savePatients(merged.patients, myNamespace);
+          saveNotes(merged.notes, myNamespace);
           setPatients(merged.patients);
           setNotes(merged.notes);
 
@@ -342,10 +447,12 @@ export default function App() {
           });
 
           const uploadRes = await saveCensusToDrive(merged, token);
+          if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== myNamespace) return;
+
           lastDriveModifiedTimeRef.current = uploadRes.updatedTime || now;
-          clearPendingMutations();
+          clearPendingMutations(myNamespace);
           setPendingChangesCount(0);
-          setLastSyncTime(now);
+          setLastSyncTime(now, myNamespace);
 
           if (!options?.silent) {
             showToast(
@@ -354,73 +461,18 @@ export default function App() {
           }
         }
       } catch (e: any) {
-        console.warn('Aviso en sincronización simultánea:', e);
+        if (e?.message === 'DRIVE_SCOPE_INSUFFICIENT') {
+          if (!options?.silent) {
+            showToast('Permisos de Google Drive insuficientes (403). Abre "Cuenta Drive" para autorizar el acceso.');
+          }
+        } else {
+          console.warn('Aviso en sincronización simultánea:', e);
+        }
       } finally {
-        isSyncingRef.current = false;
-        setIsSyncing(false);
-      }
-    },
-    [profile.name, showToast]
-  );
-
-  // Handler when the user signs into Google Drive from DriveLoginGateScreen or GoogleDriveSyncModal
-  const handleAuthenticatedWithDrive = useCallback(
-    async (accessToken: string, email: string, displayName: string) => {
-      setActiveAccountNamespace(email || 'drive_default');
-      setWorkspaceMode('drive');
-      setWorkspaceModeState('drive');
-
-      const now = new Date().toISOString();
-      const driveFile = await findDriveCensusFile(accessToken);
-
-      if (driveFile) {
-        // Download the institution's census from Google Drive as 100% authoritative truth
-        const remote = await downloadCensusFromDrive(driveFile.id, accessToken);
-        const remoteDeleted = remote.data.deletedPatientIds || {};
-        const remotePatients = (remote.data.patients || [])
-          .filter((p) => !remoteDeleted[p.id])
-          .map(normalizePatientRecord);
-        const remoteNotes = remote.data.notes || [];
-
-        saveDeletedPatients(remoteDeleted);
-        savePatients(remotePatients);
-        saveNotes(remoteNotes);
-        clearPendingMutations();
-        setPendingChangesCount(0);
-        setPatients(remotePatients);
-        setNotes(remoteNotes);
-        lastDriveModifiedTimeRef.current = remote.modifiedTime || driveFile.modifiedTime || now;
-        setLastSyncTime(now);
-
-        showToast(
-          `Conectado a Google Drive (${email || displayName}): ${remotePatients.length} paciente(s) cargado(s).`
-        );
-      } else {
-        // Brand new Google Drive account with no census file yet: initialize a clean 0-patient census in Drive
-        saveDeletedPatients({});
-        savePatients([]);
-        saveNotes([]);
-        clearPendingMutations();
-        setPendingChangesCount(0);
-        setPatients([]);
-        setNotes([]);
-
-        const cleanPackage: BackupPackage = {
-          version: '1.1.0',
-          exportDate: now,
-          residentAuthor: displayName || profile.name,
-          patients: [],
-          notes: [],
-          deletedPatientIds: {},
-          integrityHash: generateAuditHash('init-clean-drive', now.split('T')[0], 'pts:0'),
-        };
-        const created = await saveCensusToDrive(cleanPackage, accessToken);
-        lastDriveModifiedTimeRef.current = created.updatedTime || now;
-        setLastSyncTime(now);
-
-        showToast(
-          `Nuevo censo institucional creado en Google Drive (${email || displayName}) con 0 pacientes.`
-        );
+        if (myEpoch === sessionEpochRef.current) {
+          isSyncingRef.current = false;
+          setIsSyncing(false);
+        }
       }
     },
     [profile.name, showToast]
@@ -428,18 +480,225 @@ export default function App() {
 
   // Reload data from current namespace
   const handleReloadData = useCallback(() => {
+    const currentNs = getActiveAccountNamespace();
+    setActiveNamespace(currentNs);
     setWorkspaceModeState(getWorkspaceMode());
-    setPatients(loadPatients());
-    setNotes(loadNotes());
-    const prof = loadProfile();
+    setPatients(loadPatients(currentNs));
+    setNotes(loadNotes(currentNs));
+    const prof = loadProfile(currentNs);
     setProfile(prof);
     setIsAdmin(prof.activeRole !== 'intern');
-    setPendingChangesCount(getPendingMutations().length);
+    setPendingChangesCount(getPendingMutations(currentNs).length);
   }, []);
+
+  // Unified Logout & Account Switch handler: cancels pending operations, clears session & resets React state
+  const handleLogoutAndSwitchAccount = useCallback(async () => {
+    sessionEpochRef.current += 1;
+    if (livePushTimeoutRef.current) {
+      window.clearTimeout(livePushTimeoutRef.current);
+      livePushTimeoutRef.current = null;
+    }
+    isSyncingRef.current = false;
+    setIsSyncing(false);
+    lastDriveModifiedTimeRef.current = null;
+    closeAllTransientModals();
+    setIsDriveSyncOpen(false);
+    setIsSettingsOpen(false);
+
+    await googleLogout();
+
+    setActiveNamespace(UNAUTHENTICATED_NAMESPACE);
+    setWorkspaceModeState(null);
+    setPatients([]);
+    setNotes([]);
+    setPendingChangesCount(0);
+  }, [closeAllTransientModals]);
+
+  // Handler when the user signs into Google Drive from DriveLoginGateScreen or GoogleDriveSyncModal
+  const handleAuthenticatedWithDrive = useCallback(
+    async (
+      accessToken: string,
+      uid: string,
+      email: string,
+      displayName: string,
+      hasDriveScope: boolean = true
+    ) => {
+      // 1. Invalidate any in-flight operations from previous session immediately
+      sessionEpochRef.current += 1;
+      const myEpoch = sessionEpochRef.current;
+      if (livePushTimeoutRef.current) {
+        window.clearTimeout(livePushTimeoutRef.current);
+        livePushTimeoutRef.current = null;
+      }
+      isSyncingRef.current = false;
+      setIsSyncing(false);
+      lastDriveModifiedTimeRef.current = null;
+      closeAllTransientModals();
+
+      // 2. Activate the UID-scoped namespace and synchronously load ONLY this user's local data into React state
+      // BEFORE any network call to Google Drive so the previous user's data is NEVER displayed.
+      const targetNs = activateAuthenticatedUserNamespace(uid, email);
+      setActiveNamespace(targetNs);
+      setWorkspaceMode('drive');
+      setWorkspaceModeState('drive');
+
+      const localPatientsForUser = loadPatients(targetNs);
+      const localNotesForUser = loadNotes(targetNs);
+      const localProfileForUser = loadProfile(targetNs);
+      const localPendingForUser = getPendingMutations(targetNs);
+
+      setPatients(localPatientsForUser);
+      setNotes(localNotesForUser);
+      setProfile(localProfileForUser);
+      setIsAdmin(localProfileForUser.activeRole !== 'intern');
+      setPendingChangesCount(localPendingForUser.length);
+
+      // 3. If the token lacks drive.file scope, keep the user's isolated local state and inform them clearly
+      if (!hasDriveScope || !accessToken) {
+        showToast(
+          `Sesión iniciada (${email || displayName}). Autoriza permisos de Google Drive en "Cuenta Drive" para sincronizar.`
+        );
+        return;
+      }
+
+      // 4. Synchronize with this authenticated user's own Google Drive
+      try {
+        isSyncingRef.current = true;
+        setIsSyncing(true);
+
+        const now = new Date().toISOString();
+        const driveFile = await findDriveCensusFile(accessToken);
+        if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== targetNs) return;
+
+        if (driveFile) {
+          const remote = await downloadCensusFromDrive(driveFile.id, accessToken);
+          if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== targetNs) return;
+
+          // Prevent importing a file if it explicitly belongs to a different UID
+          if (remote.data.accountUid && uid && remote.data.accountUid !== uid) {
+            showToast('Se evitó importar un archivo de Drive asociado a otra cuenta.');
+            return;
+          }
+
+          const currentLocalPts = loadPatients(targetNs);
+          const currentLocalNts = loadNotes(targetNs);
+          const currentLocalDel = loadDeletedPatients(targetNs);
+
+          if (currentLocalPts.length > 0 && getPendingMutations(targetNs).length > 0) {
+            // Merge this user's own unsynced local changes with their own Drive file
+            const localPkg: BackupPackage = {
+              version: '1.1.0',
+              exportDate: now,
+              residentAuthor: displayName || localProfileForUser.name,
+              accountUid: uid,
+              accountEmail: email,
+              patients: currentLocalPts,
+              notes: currentLocalNts,
+              deletedPatientIds: currentLocalDel,
+              integrityHash: '',
+            };
+            const { merged } = mergeCensusData(localPkg, remote.data, displayName || localProfileForUser.name);
+            if (merged.deletedPatientIds) {
+              saveDeletedPatients(merged.deletedPatientIds, targetNs);
+            }
+            savePatients(merged.patients, targetNs);
+            saveNotes(merged.notes, targetNs);
+            clearPendingMutations(targetNs);
+            setPendingChangesCount(0);
+            setPatients(merged.patients);
+            setNotes(merged.notes);
+
+            const uploaded = await saveCensusToDrive(merged, accessToken);
+            if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== targetNs) return;
+            lastDriveModifiedTimeRef.current = uploaded.updatedTime || now;
+            setLastSyncTime(now, targetNs);
+
+            showToast(
+              `Conectado a Google Drive (${email || displayName}): ${merged.patients.length} paciente(s) sincronizado(s).`
+            );
+          } else {
+            const remoteDeleted = remote.data.deletedPatientIds || {};
+            const remotePatients = (remote.data.patients || [])
+              .filter((p) => !remoteDeleted[p.id])
+              .map(normalizePatientRecord);
+            const remoteNotes = remote.data.notes || [];
+
+            saveDeletedPatients(remoteDeleted, targetNs);
+            savePatients(remotePatients, targetNs);
+            saveNotes(remoteNotes, targetNs);
+            clearPendingMutations(targetNs);
+            setPendingChangesCount(0);
+            setPatients(remotePatients);
+            setNotes(remoteNotes);
+            lastDriveModifiedTimeRef.current = remote.modifiedTime || driveFile.modifiedTime || now;
+            setLastSyncTime(now, targetNs);
+
+            showToast(
+              `Conectado a Google Drive (${email || displayName}): ${remotePatients.length} paciente(s) cargado(s).`
+            );
+          }
+        } else {
+          // Brand new Google Drive account with no census file in Drive yet:
+          // Preserve any patients already created in this user's own UID namespace (or [] if new) and create the file in Drive
+          const existingOwnPatients = loadPatients(targetNs);
+          const existingOwnNotes = loadNotes(targetNs);
+          const existingOwnDeleted = loadDeletedPatients(targetNs);
+
+          saveDeletedPatients(existingOwnDeleted, targetNs);
+          savePatients(existingOwnPatients, targetNs);
+          saveNotes(existingOwnNotes, targetNs);
+          clearPendingMutations(targetNs);
+          setPendingChangesCount(0);
+          setPatients(existingOwnPatients);
+          setNotes(existingOwnNotes);
+
+          const initialPackage: BackupPackage = {
+            version: '1.1.0',
+            exportDate: now,
+            residentAuthor: displayName || localProfileForUser.name,
+            accountUid: uid,
+            accountEmail: email,
+            patients: existingOwnPatients,
+            notes: existingOwnNotes,
+            deletedPatientIds: existingOwnDeleted,
+            integrityHash: generateAuditHash('init-clean-drive', now.split('T')[0], `pts:${existingOwnPatients.length}`),
+          };
+          const created = await saveCensusToDrive(initialPackage, accessToken);
+          if (myEpoch !== sessionEpochRef.current || getActiveAccountNamespace() !== targetNs) return;
+
+          lastDriveModifiedTimeRef.current = created.updatedTime || now;
+          setLastSyncTime(now, targetNs);
+
+          showToast(
+            `Censo institucional en Google Drive (${email || displayName}) inicializado con ${existingOwnPatients.length} paciente(s).`
+          );
+        }
+      } catch (err: any) {
+        if (myEpoch !== sessionEpochRef.current) return;
+        if (err?.message === 'DRIVE_SCOPE_INSUFFICIENT') {
+          showToast(
+            'Tu cuenta inició sesión con su censo aislado, pero Google Drive requiere autorizar permisos (Error 403). Abre "Cuenta Drive" para concederlos.'
+          );
+        } else {
+          console.warn('Error al sincronizar tras iniciar sesión en Drive:', err);
+          showToast(
+            `Sesión activa para ${email || displayName}. No se pudo conectar a Drive en este momento; trabajando en censo local de tu cuenta.`
+          );
+        }
+      } finally {
+        if (myEpoch === sessionEpochRef.current) {
+          isSyncingRef.current = false;
+          setIsSyncing(false);
+        }
+      }
+    },
+    [closeAllTransientModals, showToast]
+  );
 
   const handleLoad100StressTestPatients = useCallback(() => {
     if (!getWorkspaceMode()) {
       setActiveAccountNamespace('demo');
+      setActiveNamespace('demo');
       setWorkspaceMode('demo');
       setWorkspaceModeState('demo');
     }
@@ -455,6 +714,7 @@ export default function App() {
   const handleLoad3DemoPatients = useCallback(() => {
     if (!getWorkspaceMode()) {
       setActiveAccountNamespace('demo');
+      setActiveNamespace('demo');
       setWorkspaceMode('demo');
       setWorkspaceModeState('demo');
     }
@@ -475,23 +735,20 @@ export default function App() {
     showToast('Censo vaciado a 0 pacientes.');
   }, [scheduleAuthoritativeDrivePush, showToast]);
 
-  // Initialize data & cross-tab storage synchronization
+  // Initialize data, Firebase auth listener & cross-tab storage synchronization
   useEffect(() => {
-    // Clean up any previous forced developer auto-seed so regular users do not get 100 test patients automatically
-    if (
-      typeof window !== 'undefined' &&
-      localStorage.getItem('resimed_stress_test_100_autoseed_v1') === 'done' &&
-      localStorage.getItem('resimed_cleaned_dev_autoseed_v1') !== 'done'
-    ) {
-      localStorage.setItem('resimed_cleaned_dev_autoseed_v1', 'done');
-      localStorage.removeItem('resimed_stress_test_100_autoseed_v1');
-      if (getWorkspaceMode() === 'demo') {
-        setActiveAccountNamespace('local');
-        setWorkspaceMode('local');
-      }
-    }
-
+    ensureConsistentInitialSession();
     handleReloadData();
+
+    initAuth((firebaseUser) => {
+      // If we are in drive mode and Firebase reports a user with a UID, ensure their UID namespace is active
+      if (getWorkspaceMode() === 'drive' && firebaseUser?.uid) {
+        const expectedNs = activateAuthenticatedUserNamespace(firebaseUser.uid, firebaseUser.email);
+        if (expectedNs !== getActiveAccountNamespace()) {
+          handleReloadData();
+        }
+      }
+    });
 
     // If already in 'drive' workspace mode with a valid token on startup, pull authoritative state from Drive immediately
     if (getWorkspaceMode() === 'drive' && navigator.onLine) {
@@ -499,9 +756,8 @@ export default function App() {
     }
 
     const handleCrossTabStorage = () => {
-      setPatients(loadPatients());
-      setNotes(loadNotes());
-      setPendingChangesCount(getPendingMutations().length);
+      ensureConsistentInitialSession();
+      handleReloadData();
     };
     window.addEventListener('storage', handleCrossTabStorage);
     return () => window.removeEventListener('storage', handleCrossTabStorage);
@@ -1050,8 +1306,7 @@ export default function App() {
             <span className="text-slate-600">|</span>
             <button
               onClick={() => {
-                setWorkspaceMode(null);
-                setWorkspaceModeState(null);
+                void handleLogoutAndSwitchAccount();
               }}
               className="text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer whitespace-nowrap"
               title="Cambiar cuenta institucional o modo de inicio"
@@ -1113,6 +1368,7 @@ export default function App() {
       >
         {currentTab === 'census' && (
           <CensusDashboard
+            key={activeNamespace}
             patients={patients}
             isAdmin={isAdmin}
             onSelectPatient={(p) => setSelectedPatientForDetail(p)}
@@ -1172,6 +1428,7 @@ export default function App() {
         {currentTab === 'printable' && (
           <div className="max-w-7xl w-full mx-auto">
             <PrintableCensus
+              key={activeNamespace}
               patients={patients}
               profile={profile}
               onShowToast={showToast}
@@ -1182,6 +1439,7 @@ export default function App() {
         {currentTab === 'vault' && (
           <div className="max-w-7xl w-full mx-auto">
             <BackupVaultModal
+              key={activeNamespace}
               notes={notes}
               patients={patients}
               profile={profile}
@@ -1377,8 +1635,13 @@ export default function App() {
         onRequestAdminMode={handleRequestAdminMode}
         onDataSynced={handleReloadData}
         onDriveSessionChanged={() => {
-          setWorkspaceModeState(getWorkspaceMode());
-          handleReloadData();
+          const currentMode = getWorkspaceMode();
+          if (!currentMode) {
+            void handleLogoutAndSwitchAccount();
+          } else {
+            setWorkspaceModeState(currentMode);
+            handleReloadData();
+          }
         }}
         onAuthenticatedWithDrive={handleAuthenticatedWithDrive}
         showToast={showToast}

@@ -8,7 +8,12 @@ import {
   signOut,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { BackupPackage, setActiveAccountNamespace } from './storage.ts';
+import {
+  BackupPackage,
+  activateAuthenticatedUserNamespace,
+  setActiveAccountNamespace,
+  UNAUTHENTICATED_NAMESPACE,
+} from './storage.ts';
 import { executeAndVerifyRecaptcha } from './recaptchaEnterprise.ts';
 
 // Initialize Firebase App singleton safely
@@ -16,13 +21,17 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
 const DRIVE_FILE_NAME = 'ResiMed-Censo-MI.json';
-const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+export const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
-const provider = new GoogleAuthProvider();
-provider.addScope(DRIVE_FILE_SCOPE);
-provider.setCustomParameters({
-  prompt: 'select_account',
-});
+function createGoogleDriveAuthProvider(forceConsent: boolean = false): GoogleAuthProvider {
+  const authProvider = new GoogleAuthProvider();
+  authProvider.addScope(DRIVE_FILE_SCOPE);
+  authProvider.setCustomParameters({
+    prompt: forceConsent ? 'consent select_account' : 'select_account',
+    include_granted_scopes: 'true',
+  });
+  return authProvider;
+}
 
 let isSigningIn = false;
 const SESSION_TOKEN_KEY = 'resimed_gdrive_access_token_v2';
@@ -33,6 +42,7 @@ export interface SavedDriveUserInfo {
   email: string;
   displayName: string;
   uid: string;
+  hasDriveScope?: boolean;
 }
 
 let cachedAccessToken: string | null =
@@ -66,65 +76,128 @@ export function getSavedDriveUser(): SavedDriveUserInfo | null {
   try {
     const raw = localStorage.getItem(SESSION_USER_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as SavedDriveUserInfo;
+    const parsed = JSON.parse(raw) as SavedDriveUserInfo;
+    if (!parsed || (!parsed.uid && !parsed.email)) return null;
+    return parsed;
   } catch {
     return null;
   }
 }
 
+/**
+ * Verifies with Google OAuth2 tokeninfo endpoint whether the access token
+ * actually holds the required Google Drive scope (`drive.file` or `drive`).
+ */
+export async function verifyTokenHasDriveScope(accessToken: string): Promise<boolean> {
+  if (!accessToken) return false;
+  try {
+    const resp = await fetch(
+      `https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${encodeURIComponent(accessToken)}`,
+      { method: 'GET', cache: 'no-store' }
+    );
+    if (!resp.ok) {
+      // If offline or endpoint unreachable, assume true and let Drive API validate
+      return resp.status !== 400 && resp.status !== 401;
+    }
+    const info = await resp.json();
+    const scopesStr = String(info?.scope || '');
+    return (
+      scopesStr.includes('https://www.googleapis.com/auth/drive.file') ||
+      scopesStr.includes('https://www.googleapis.com/auth/drive')
+    );
+  } catch {
+    return true;
+  }
+}
+
 export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthSuccess?: (user: User, token: string | null) => void,
   onAuthFailure?: () => void
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
+    if (isSigningIn) return;
+
     if (user) {
+      const saved = getSavedDriveUser();
+      // If Firebase restored a user session, ensure the UID namespace matches the authenticated user
+      activateAuthenticatedUserNamespace(user.uid, user.email);
+
       const userInfo: SavedDriveUserInfo = {
         email: user.email || user.uid,
         displayName: user.displayName || user.email || 'Usuario Google Drive',
         uid: user.uid,
+        hasDriveScope: saved?.uid === user.uid ? saved.hasDriveScope : undefined,
       };
       if (typeof window !== 'undefined') {
         localStorage.setItem(SESSION_USER_KEY, JSON.stringify(userInfo));
       }
-      if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
-      } else if (!isSigningIn) {
-        if (onAuthFailure) onAuthFailure();
+
+      // If the cached token belonged to a different UID, discard it immediately
+      if (saved && saved.uid && saved.uid !== user.uid) {
+        clearExpiredAccessToken();
+      }
+
+      if (onAuthSuccess) {
+        onAuthSuccess(user, cachedAccessToken);
       }
     } else {
+      cachedAccessToken = null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(SESSION_TOKEN_KEY);
+        localStorage.removeItem(SESSION_USER_KEY);
+      }
       if (onAuthFailure) onAuthFailure();
     }
   });
 };
 
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+export const googleSignIn = async (options?: {
+  forceConsent?: boolean;
+}): Promise<{ user: User; accessToken: string; hasDriveScope: boolean } | null> => {
   try {
     isSigningIn = true;
     // Execute reCAPTCHA Enterprise LOGIN assessment concurrently so popup is never blocked by browser
     void executeAndVerifyRecaptcha('LOGIN').catch(() => {});
-    const result = await signInWithPopup(auth, provider);
+
+    const authProvider = createGoogleDriveAuthProvider(Boolean(options?.forceConsent));
+    const result = await signInWithPopup(auth, authProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error('No se pudo obtener el token de acceso de Google Drive');
     }
 
-    cachedAccessToken = credential.accessToken;
-    const emailKey = (result.user.email || result.user.uid).trim().toLowerCase();
-    setActiveAccountNamespace(emailKey);
+    const token = credential.accessToken;
+    const hasScope = await verifyTokenHasDriveScope(token);
+
+    // Activate canonical UID namespace (and migrate any legacy email data for this same user)
+    activateAuthenticatedUserNamespace(result.user.uid, result.user.email);
     setWorkspaceMode('drive');
 
+    if (hasScope) {
+      cachedAccessToken = token;
+    } else {
+      // Do not cache an access token that lacks drive.file scope so we never poll Drive with a 403 token
+      cachedAccessToken = null;
+    }
+
     if (typeof window !== 'undefined') {
-      localStorage.setItem(SESSION_TOKEN_KEY, cachedAccessToken);
+      if (hasScope) {
+        localStorage.setItem(SESSION_TOKEN_KEY, token);
+      } else {
+        localStorage.removeItem(SESSION_TOKEN_KEY);
+      }
       localStorage.setItem(
         SESSION_USER_KEY,
         JSON.stringify({
           email: result.user.email || result.user.uid,
           displayName: result.user.displayName || result.user.email || 'Usuario Google Drive',
           uid: result.user.uid,
-        })
+          hasDriveScope: hasScope,
+        } satisfies SavedDriveUserInfo)
       );
     }
-    return { user: result.user, accessToken: cachedAccessToken };
+
+    return { user: result.user, accessToken: token, hasDriveScope: hasScope };
   } catch (error: any) {
     console.error('Error al iniciar sesión con Google:', error);
     throw error;
@@ -155,6 +228,7 @@ export const googleLogout = async (): Promise<void> => {
     localStorage.removeItem(SESSION_TOKEN_KEY);
     localStorage.removeItem(SESSION_USER_KEY);
     setWorkspaceMode(null);
+    setActiveAccountNamespace(UNAUTHENTICATED_NAMESPACE);
   }
 };
 
@@ -167,6 +241,30 @@ export interface DriveFileInfo {
   name: string;
   modifiedTime?: string;
   size?: string;
+}
+
+function handleDriveHttpError(status: number, errorText: string, contextMsg: string): never {
+  if (status === 401) {
+    clearExpiredAccessToken();
+    throw new Error('DRIVE_TOKEN_EXPIRED');
+  }
+  if (
+    status === 403 &&
+    (errorText.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') ||
+      errorText.includes('insufficientPermissions') ||
+      errorText.includes('insufficient authentication scopes'))
+  ) {
+    clearExpiredAccessToken();
+    const saved = getSavedDriveUser();
+    if (saved && typeof window !== 'undefined') {
+      localStorage.setItem(
+        SESSION_USER_KEY,
+        JSON.stringify({ ...saved, hasDriveScope: false })
+      );
+    }
+    throw new Error('DRIVE_SCOPE_INSUFFICIENT');
+  }
+  throw new Error(`${contextMsg}: ${status} - ${errorText}`);
 }
 
 /**
@@ -186,14 +284,9 @@ export async function findDriveCensusFile(accessToken: string): Promise<DriveFil
     },
   });
 
-  if (response.status === 401) {
-    clearExpiredAccessToken();
-    throw new Error('DRIVE_TOKEN_EXPIRED');
-  }
-
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Error al buscar archivo en Google Drive: ${response.status} - ${errorText}`);
+    handleDriveHttpError(response.status, errorText, 'Error al buscar archivo en Google Drive');
   }
 
   const data = await response.json();
@@ -221,14 +314,9 @@ export async function downloadCensusFromDrive(
     },
   });
 
-  if (response.status === 401) {
-    clearExpiredAccessToken();
-    throw new Error('DRIVE_TOKEN_EXPIRED');
-  }
-
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Error al descargar archivo de Google Drive: ${response.status} - ${errorText}`);
+    handleDriveHttpError(response.status, errorText, 'Error al descargar archivo de Google Drive');
   }
 
   const json: BackupPackage = await response.json();
@@ -242,8 +330,15 @@ export async function saveCensusToDrive(
   backupData: BackupPackage,
   accessToken: string
 ): Promise<{ fileId: string; updatedTime: string; isNew: boolean }> {
+  const savedUser = getSavedDriveUser();
+  const stampedPackage: BackupPackage = {
+    ...backupData,
+    accountUid: backupData.accountUid || savedUser?.uid,
+    accountEmail: backupData.accountEmail || savedUser?.email,
+  };
+
   const existingFile = await findDriveCensusFile(accessToken);
-  const jsonContent = JSON.stringify(backupData, null, 2);
+  const jsonContent = JSON.stringify(stampedPackage, null, 2);
 
   if (existingFile) {
     // Update existing file content
@@ -258,14 +353,13 @@ export async function saveCensusToDrive(
       body: jsonContent,
     });
 
-    if (patchResponse.status === 401) {
-      clearExpiredAccessToken();
-      throw new Error('DRIVE_TOKEN_EXPIRED');
-    }
-
     if (!patchResponse.ok) {
       const errorText = await patchResponse.text();
-      throw new Error(`Error al actualizar censo en Google Drive: ${patchResponse.status} - ${errorText}`);
+      handleDriveHttpError(
+        patchResponse.status,
+        errorText,
+        'Error al actualizar censo en Google Drive'
+      );
     }
 
     const result = await patchResponse.json();
@@ -295,7 +389,8 @@ export async function saveCensusToDrive(
       jsonContent +
       closeDelimiter;
 
-    const createUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime';
+    const createUrl =
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime';
     const postResponse = await fetch(createUrl, {
       method: 'POST',
       cache: 'no-store',
@@ -306,14 +401,9 @@ export async function saveCensusToDrive(
       body: body,
     });
 
-    if (postResponse.status === 401) {
-      clearExpiredAccessToken();
-      throw new Error('DRIVE_TOKEN_EXPIRED');
-    }
-
     if (!postResponse.ok) {
       const errorText = await postResponse.text();
-      throw new Error(`Error al crear archivo en Google Drive: ${postResponse.status} - ${errorText}`);
+      handleDriveHttpError(postResponse.status, errorText, 'Error al crear archivo en Google Drive');
     }
 
     const created = await postResponse.json();

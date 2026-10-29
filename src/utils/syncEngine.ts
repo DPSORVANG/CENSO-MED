@@ -4,6 +4,9 @@ import {
   loadDeletedPatients,
   saveDeletedPatients,
   isPatientDeletedByTombstone,
+  getScopedKey,
+  getActiveAccountNamespace,
+  UNAUTHENTICATED_NAMESPACE,
 } from './storage.ts';
 import { generateAuditHash } from './clinicalLogic.ts';
 
@@ -26,19 +29,21 @@ export interface OfflineMutation {
   timestamp: string;
 }
 
-const MUTATIONS_STORAGE_KEY = 'resimed_offline_mutations_v1';
-const LAST_SYNC_KEY = 'resimed_last_sync_timestamp_v1';
-
 /**
- * Records a local mutation made while working (online or offline)
+ * Records a local mutation made while working (online or offline), scoped to the active account namespace
  */
 export function recordOfflineMutation(
   type: OfflineMutation['type'],
   entityId: string,
-  description: string
+  description: string,
+  namespaceOverride?: string
 ): void {
   try {
-    const raw = localStorage.getItem(MUTATIONS_STORAGE_KEY);
+    const ns = namespaceOverride ?? getActiveAccountNamespace();
+    if (ns === UNAUTHENTICATED_NAMESPACE) return;
+
+    const key = getScopedKey('offline_mutations', ns);
+    const raw = localStorage.getItem(key);
     const mutations: OfflineMutation[] = raw ? JSON.parse(raw) : [];
     const newMutation: OfflineMutation = {
       id: 'mut_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
@@ -48,18 +53,22 @@ export function recordOfflineMutation(
       timestamp: new Date().toISOString(),
     };
     mutations.push(newMutation);
-    localStorage.setItem(MUTATIONS_STORAGE_KEY, JSON.stringify(mutations));
+    localStorage.setItem(key, JSON.stringify(mutations));
   } catch (e) {
     console.warn('Could not record offline mutation:', e);
   }
 }
 
 /**
- * Gets the list of pending local mutations
+ * Gets the list of pending local mutations for the active account namespace
  */
-export function getPendingMutations(): OfflineMutation[] {
+export function getPendingMutations(namespaceOverride?: string): OfflineMutation[] {
   try {
-    const raw = localStorage.getItem(MUTATIONS_STORAGE_KEY);
+    const ns = namespaceOverride ?? getActiveAccountNamespace();
+    if (ns === UNAUTHENTICATED_NAMESPACE) return [];
+
+    const key = getScopedKey('offline_mutations', ns);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -67,33 +76,41 @@ export function getPendingMutations(): OfflineMutation[] {
 }
 
 /**
- * Clears the pending mutations queue after a successful merge & sync
+ * Clears the pending mutations queue after a successful merge & sync for the active account namespace
  */
-export function clearPendingMutations(): void {
+export function clearPendingMutations(namespaceOverride?: string): void {
   try {
-    localStorage.removeItem(MUTATIONS_STORAGE_KEY);
+    const ns = namespaceOverride ?? getActiveAccountNamespace();
+    const key = getScopedKey('offline_mutations', ns);
+    localStorage.removeItem(key);
   } catch (e) {
     console.warn('Could not clear mutations:', e);
   }
 }
 
 /**
- * Gets the last sync timestamp
+ * Gets the last sync timestamp for the active account namespace
  */
-export function getLastSyncTime(): string | null {
+export function getLastSyncTime(namespaceOverride?: string): string | null {
   try {
-    return localStorage.getItem(LAST_SYNC_KEY);
+    const ns = namespaceOverride ?? getActiveAccountNamespace();
+    if (ns === UNAUTHENTICATED_NAMESPACE) return null;
+
+    return localStorage.getItem(getScopedKey('last_sync_timestamp', ns));
   } catch {
     return null;
   }
 }
 
 /**
- * Sets the last sync timestamp
+ * Sets the last sync timestamp for the active account namespace
  */
-export function setLastSyncTime(timestamp: string): void {
+export function setLastSyncTime(timestamp: string, namespaceOverride?: string): void {
   try {
-    localStorage.setItem(LAST_SYNC_KEY, timestamp);
+    const ns = namespaceOverride ?? getActiveAccountNamespace();
+    if (ns === UNAUTHENTICATED_NAMESPACE) return;
+
+    localStorage.setItem(getScopedKey('last_sync_timestamp', ns), timestamp);
   } catch (e) {
     console.warn('Could not save last sync time:', e);
   }

@@ -19,7 +19,13 @@ import {
 } from '../utils/storage.ts';
 
 interface DriveLoginGateScreenProps {
-  onAuthenticatedWithDrive: (accessToken: string, email: string, displayName: string) => Promise<void>;
+  onAuthenticatedWithDrive: (
+    accessToken: string,
+    uid: string,
+    email: string,
+    displayName: string,
+    hasDriveScope?: boolean
+  ) => Promise<void>;
   onEnterLocalMode: () => void;
   onEnterDemoMode?: () => void;
   onOpenDeveloperConsole?: () => void;
@@ -37,25 +43,33 @@ export const DriveLoginGateScreen: React.FC<DriveLoginGateScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const handleDriveSignIn = async () => {
+  const handleDriveSignIn = async (forceConsent = false) => {
     setIsLoading(true);
     setErrorMsg(null);
     setStatusText('Autenticando con Google Drive...');
     try {
-      const res = await googleSignIn();
+      const res = await googleSignIn({ forceConsent });
       if (res) {
-        setStatusText('Descargando censo institucional desde Google Drive...');
+        setStatusText('Sincronizando censo institucional exclusivo de esta cuenta...');
         await onAuthenticatedWithDrive(
           res.accessToken,
+          res.user.uid,
           res.user.email || res.user.uid,
-          res.user.displayName || res.user.email || 'Servicio Médico'
+          res.user.displayName || res.user.email || 'Servicio Médico',
+          res.hasDriveScope
         );
       }
     } catch (e: any) {
       const code = e?.code || '';
       const msg = e?.message || '';
       if (code !== 'auth/popup-closed-by-user') {
-        setErrorMsg(msg || 'No se pudo iniciar sesión con Google Drive.');
+        if (msg === 'DRIVE_SCOPE_INSUFFICIENT') {
+          setErrorMsg(
+            'Tu cuenta inició sesión, pero faltó autorizar el permiso de Google Drive en la ventana emergente. Haz clic en el botón de abajo y marca la casilla de permiso de Google Drive.'
+          );
+        } else {
+          setErrorMsg(msg || 'No se pudo iniciar sesión con Google Drive.');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -107,7 +121,7 @@ export const DriveLoginGateScreen: React.FC<DriveLoginGateScreenProps> = ({
               ResiMed MI • Acceso Institucional
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
-              Inicia sesión con la cuenta de Google Drive de tu hospital o servicio médico. Toda la información se guarda directamente en tu Drive y se actualiza simultáneamente entre estaciones autorizadas.
+              Inicia sesión con la cuenta de Google Drive de tu hospital o servicio médico. Cada cuenta tiene su propio espacio de datos aislado y sincronizado en su unidad de Drive.
             </p>
           </div>
         </div>
@@ -125,15 +139,15 @@ export const DriveLoginGateScreen: React.FC<DriveLoginGateScreenProps> = ({
                   Conectar Cuenta de Google Drive del Servicio
                 </h2>
                 <p className="text-slate-400 leading-relaxed">
-                  Al iniciar sesión, la aplicación sincroniza directamente el archivo{' '}
-                  <code className="text-teal-300 font-mono">ResiMed-Censo-MI.json</code> en tu Google Drive como fuente única de verdad.
+                  Al iniciar sesión, la aplicación aísla tus datos por identificador de cuenta (UID) y sincroniza el archivo{' '}
+                  <code className="text-teal-300 font-mono">ResiMed-Censo-MI.json</code> en tu Google Drive.
                 </p>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={handleDriveSignIn}
+              onClick={() => handleDriveSignIn(false)}
               disabled={isLoading}
               className="w-full py-3 px-5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl shadow-lg flex items-center justify-center gap-3 text-xs sm:text-sm transition-all cursor-pointer disabled:opacity-60"
             >
@@ -170,7 +184,7 @@ export const DriveLoginGateScreen: React.FC<DriveLoginGateScreenProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px] text-slate-400">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0" />
-                <span>Censo propio por cuenta</span>
+                <span>Censo propio por UID</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 shrink-0" />
@@ -184,9 +198,18 @@ export const DriveLoginGateScreen: React.FC<DriveLoginGateScreenProps> = ({
           </div>
 
           {errorMsg && (
-            <div className="p-4 bg-rose-950/50 border border-rose-800/80 rounded-2xl flex items-start gap-2 text-xs text-rose-200 font-semibold">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
+            <div className="p-4 bg-rose-950/50 border border-rose-800/80 rounded-2xl space-y-2.5 text-xs text-rose-200 font-semibold">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleDriveSignIn(true)}
+                className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl font-bold text-xs cursor-pointer"
+              >
+                Autorizar Permiso de Google Drive Ahora
+              </button>
             </div>
           )}
 
